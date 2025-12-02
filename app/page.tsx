@@ -1,18 +1,18 @@
-import { LoginForm } from "@/components/login-form"
 
-export default function LoginPage() {
+import { FeaturesSection } from "../components/feature-section"
+import { HeroSection } from "../components/hero-section"
+import { Footer } from "../components/footer"
+import { ScrollToTop } from "../components/scroll-to-top"
+import { SolutionsSection } from "../components/solution-section"
+
+export default function Home() {
   return (
-    <main className="min-h-screen relative flex items-center justify-center p-4">
-      {/* Background Image */}
-      <div
-        className="absolute inset-0 bg-cover bg-center bg-no-repeat"
-        style={{
-          backgroundImage: "url('/shanghai-skyline-at-dusk-with-city-lights-and-rive.jpg')",
-        }}
-      />
-
-      {/* Login Card */}
-      <LoginForm />
+    <main className="min-h-screen">
+      <HeroSection />
+      <FeaturesSection />
+      <SolutionsSection />
+      <Footer />
+      <ScrollToTop />
     </main>
   )
 }
