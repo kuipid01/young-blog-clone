@@ -1,10 +1,10 @@
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout"
-import { DashboardHome } from "../../components/dashboard-home"
+import { RulesContent } from "../../../components/rules"
 
-export default function DashboardPage() {
+export default function RulesPage() {
   return (
     <DashboardLayout>
-      <DashboardHome />
+      <RulesContent />
     </DashboardLayout>
   )
 }

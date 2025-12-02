@@ -45,11 +45,10 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
         <div className="flex items-center justify-between p-4 border-b border-gray-100">
           <Link href="/dashboard" className="flex items-center gap-2">
             <div className="w-10 h-10 bg-violet-600 rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-lg">YB</span>
+              <span className="text-white font-bold text-lg">JM</span>
             </div>
             <div className="flex flex-col">
-              <span className="text-xs font-semibold text-violet-600 leading-tight">Young</span>
-              <span className="text-xs font-semibold text-violet-600 leading-tight">Blog</span>
+              <span className="text-xs font-semibold text-violet-600 leading-tight">JEMIL</span>
               <span className="text-[10px] text-gray-500 leading-tight">Marketplace</span>
             </div>
           </Link>
