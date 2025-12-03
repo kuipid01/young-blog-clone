@@ -7,7 +7,17 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import Link from "next/link";
-import { Eye, EyeOff, User, Mail, Lock, Check, X, Code2, Gift } from "lucide-react";
+import {
+  Eye,
+  EyeOff,
+  User,
+  Mail,
+  Lock,
+  Check,
+  X,
+  Code2,
+  Gift,
+} from "lucide-react";
 import { useRouter } from "next/navigation";
 
 export function RegisterForm() {
@@ -342,12 +352,7 @@ export function RegisterForm() {
               className="pl-11 pr-11 h-12 border-2 border-border bg-muted/30 rounded-xl transition-all duration-200 focus:border-[#6C5CE7] focus:bg-white focus:ring-2 focus:ring-[#6C5CE7]/20"
               required
             />
-
-         
-
           </div>
-
-         
         </div>
 
         {/* Terms */}
@@ -379,14 +384,17 @@ export function RegisterForm() {
         </Button>
       </form>
 
-      <p className="text-center text-sm text-muted-foreground mt-6">
+      <p className="text-center relative text-sm text-muted-foreground mt-6">
         Already have an account?{" "}
-        <Link
-          href="/auth/login"
-          className="text-[#6C5CE7] hover:underline font-semibold transition-colors duration-200"
+        <Button
+        
+          onClick={() => {
+           router.push("/auth/login")
+          }}
+          className="text-[#6C5CE7]  bg-transparent hover:bg-transparent cursor-pointer hover:underline font-semibold transition-colors duration-200"
         >
           Sign in
-        </Link>
+        </Button>
       </p>
     </div>
   );
