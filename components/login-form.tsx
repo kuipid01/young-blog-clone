@@ -23,11 +23,10 @@ export function LoginForm() {
     <div className="relative z-10 w-full max-w-md bg-white rounded-2xl shadow-xl p-8 md:p-10">
       {/* Logo */}
       <div className="flex items-center gap-3 mb-8">
-        <YBLogo className="w-12 h-12" />
+  
         <div className="flex flex-col leading-tight">
-          <span className="text-indigo-600 font-semibold text-sm">Young</span>
-          <span className="text-indigo-600 font-semibold text-sm">Blog</span>
-          <span className="text-indigo-600 font-semibold text-sm">Marketplace</span>
+          <span className="text-indigo-600 font-semibold text-sm">Jemil</span>
+           <span className="text-indigo-600 font-semibold text-sm">Marketplace</span>
         </div>
       </div>
 

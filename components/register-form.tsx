@@ -387,9 +387,8 @@ export function RegisterForm() {
       <p className="text-center relative text-sm text-muted-foreground mt-6">
         Already have an account?{" "}
         <Button
-        
           onClick={() => {
-           router.push("/auth/login")
+            router.push("/auth/login");
           }}
           className="text-[#6C5CE7]  bg-transparent hover:bg-transparent cursor-pointer hover:underline font-semibold transition-colors duration-200"
         >
