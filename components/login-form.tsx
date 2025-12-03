@@ -35,7 +35,7 @@ export function LoginForm() {
       <h1 className="text-2xl font-semibold text-gray-900 mb-1">Login with your email</h1>
       <p className="text-gray-600 mb-6">
         Don't have an Account?{" "}
-        <Link href="/register" className="text-indigo-600 hover:text-indigo-700 font-medium">
+        <Link href="/auth/register" className="text-indigo-600 hover:text-indigo-700 font-medium">
           Create Account
         </Link>
       </p>
@@ -44,7 +44,7 @@ export function LoginForm() {
       <form onSubmit={handleSubmit} className="space-y-4">
         <Input
           type="text"
-          placeholder="username / Email Address"
+          placeholder="Username / Email Address"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           className="h-12 rounded-lg border-gray-200 bg-gray-50 placeholder:text-gray-400 focus:border-indigo-500 focus:ring-indigo-500"
