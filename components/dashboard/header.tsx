@@ -23,8 +23,8 @@ export function Header({ onMenuClick }: HeaderProps) {
               <span className="text-white font-bold text-sm">YB</span>
             </div>
             <div className="hidden sm:flex flex-col">
-              <span className="text-xs font-semibold text-violet-600 leading-tight">Jemil</span>
-              <span className="text-xs font-semibold text-violet-600 leading-tight"> </span>
+              <span className="text-xs font-semibold text-violet-600 leading-tight">Young</span>
+              <span className="text-xs font-semibold text-violet-600 leading-tight">Blog</span>
               <span className="text-[9px] text-gray-500 leading-tight">Marketplace</span>
             </div>
           </Link>

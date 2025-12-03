@@ -17,7 +17,7 @@ const rules = [
 export function RulesContent() {
   return (
     <div className="bg-white rounded-2xl border border-gray-200 p-6">
-      <h1 className="text-xl font-semibold text-gray-900 mb-6">RULES AT Jemil marketplace</h1>
+      <h1 className="text-xl font-semibold text-gray-900 mb-6">RULES AT Youngblogmarketplace</h1>
 
       <ul className="space-y-0">
         {rules.map((rule, index) => (
