@@ -12,6 +12,7 @@ import {
   MessageSquare,
   Users,
   X,
+  FeatherIcon,
 } from "lucide-react"
 
 const navItems = [
@@ -20,10 +21,12 @@ const navItems = [
   { icon: Wallet, label: "Fund Wallet", href: "/dashboard/fund-wallet" },
   { icon: ClipboardList, label: "My Orders", href: "/dashboard/orders" },
   { icon: AlertTriangle, label: "Rules", href: "/dashboard/rules" },
+   { icon: FeatherIcon, label: "Referral", href: "/dashboard/referral" },
   { icon: FileText, label: "Terms Of Use", href: "/dashboard/terms" },
   { icon: MessageSquare, label: "Verify SMS", href: "/dashboard/verify-sms" },
   { icon: Users, label: "Join Group 1", href: "#" },
   { icon: Users, label: "Join Group 2", href: "#" },
+ 
 ]
 
 interface SidebarProps {

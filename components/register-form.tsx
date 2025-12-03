@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import Link from "next/link";
-import { Eye, EyeOff, User, Mail, Lock, Check, X } from "lucide-react";
+import { Eye, EyeOff, User, Mail, Lock, Check, X, Code2, Gift } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 export function RegisterForm() {
@@ -20,6 +20,7 @@ export function RegisterForm() {
     email: "",
     password: "",
     confirmPassword: "", // NEW
+    referalCode: "",
   });
   const [focusedField, setFocusedField] = useState<string | null>(null);
 
@@ -240,7 +241,6 @@ export function RegisterForm() {
           )}
         </div>
 
-        {/* 🔥 Confirm Password (NEW) */}
         <div className="space-y-2">
           <Label
             htmlFor="confirmPassword"
@@ -308,8 +308,50 @@ export function RegisterForm() {
           )}
         </div>
 
+        <div className="space-y-2">
+          <Label
+            htmlFor="confirmPassword"
+            className="text-sm font-medium text-foreground"
+          >
+            Referal Code
+          </Label>
+          <div className="relative">
+            <div
+              className={`absolute left-3 top-1/2 -translate-y-1/2 transition-colors duration-200 ${
+                focusedField === "referalCode"
+                  ? "text-[#6C5CE7]"
+                  : "text-muted-foreground"
+              }`}
+            >
+              <Gift className="w-5 h-5" />
+            </div>
+
+            <Input
+              id="referalCode"
+              type="text"
+              placeholder="Enter Referal Code"
+              value={formData.referalCode}
+              onChange={(e) =>
+                setFormData({
+                  ...formData,
+                  referalCode: e.target.value,
+                })
+              }
+              onFocus={() => setFocusedField("referalCode")}
+              onBlur={() => setFocusedField(null)}
+              className="pl-11 pr-11 h-12 border-2 border-border bg-muted/30 rounded-xl transition-all duration-200 focus:border-[#6C5CE7] focus:bg-white focus:ring-2 focus:ring-[#6C5CE7]/20"
+              required
+            />
+
+         
+
+          </div>
+
+         
+        </div>
+
         {/* Terms */}
-        <p className="text-xs text-muted-foreground text-center">
+        {/* <p className="text-xs text-muted-foreground text-center">
           By creating an account, you agree to our{" "}
           <Link href="#" className="text-[#6C5CE7] hover:underline font-medium">
             Terms of Service
@@ -318,7 +360,7 @@ export function RegisterForm() {
           <Link href="#" className="text-[#6C5CE7] hover:underline font-medium">
             Privacy Policy
           </Link>
-        </p>
+        </p> */}
 
         {/* Submit */}
         <Button
