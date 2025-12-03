@@ -8,6 +8,7 @@
   "/dashboard/products/page": "app/dashboard/products/page.js",
   "/dashboard/referral/page": "app/dashboard/referral/page.js",
   "/dashboard/rules/page": "app/dashboard/rules/page.js",
+  "/dashboard/terms/page": "app/dashboard/terms/page.js",
   "/dashboard/wallet-history/page": "app/dashboard/wallet-history/page.js",
   "/page": "app/page.js"
 }
