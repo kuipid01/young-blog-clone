@@ -1,57 +1,114 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { ChevronDown } from "lucide-react"
-import { ProductCard } from "./product-card"
+import { useEffect, useState, useMemo, useCallback } from "react";
+import { ChevronDown } from "lucide-react";
+import { ProductCard } from "./product-card";
+// Assuming ProductType is imported correctly
+import { ProductType } from "../../lib/schema";
+import { toast } from "sonner";
 
-const categories = ["All Categories", "Countries Facebook", "USA Facebook", "UK Facebook", "Nigeria Facebook"]
+// --- START: New Skeleton Component ---
+const ProductCardSkeleton = () => (
+  <div className="flex items-center justify-between p-4 animate-pulse">
+    <div className="flex items-center gap-4">
+      {/* Flag/Icon Skeleton */}
+      <div className="w-8 h-6 bg-gray-200 rounded-sm"></div>
 
-const products = [
-  {
-    id: 1,
-    title:
-      "Czech Republic FACEBOOK (30-5000 friend) ( market very good) (No 2fa ) | format uid|pass|email|pass email|cookie",
-    price: 9353.0,
-    stock: 1635,
-    category: "Countries Facebook",
-    inStock: true,
-  },
-  {
-    id: 2,
-    title:
-      "EGYPT FACEBOOK ( 30+ friends) YEAR 2017-2023 (ACCOUNT LOCATION IN NIGERIA BUT HAS MANY FRIENDS OVERSEAS) | format uid|pass|2fa|email|pass email",
-    price: 5845.0,
-    stock: 0,
-    category: "Countries Facebook",
-    inStock: false,
-  },
-  {
-    id: 3,
-    title: "GERMANY FACEBOOK (50-500 friends) YEAR 2015-2022 | format uid|pass|email|pass email|cookie",
-    price: 12500.0,
-    stock: 842,
-    category: "Countries Facebook",
-    inStock: true,
-  },
-  {
-    id: 4,
-    title: "USA FACEBOOK (100+ friends) MARKETPLACE ENABLED | format uid|pass|2fa|email|pass email",
-    price: 15000.0,
-    stock: 256,
-    category: "USA Facebook",
-    inStock: true,
-  },
-]
+      <div className="space-y-2">
+        {/* Title Skeleton */}
+        <div className="h-4 bg-gray-200 rounded w-48"></div>
+        {/* Subtitle/Category Skeleton */}
+        <div className="h-3 bg-gray-100 rounded w-32"></div>
+      </div>
+    </div>
+
+    <div className="flex items-center gap-4">
+      <div className="space-y-2 text-right">
+        {/* Price Skeleton */}
+        <div className="h-4 bg-gray-200 rounded w-16"></div>
+        {/* Stock Status Skeleton */}
+        <div className="h-3 bg-gray-100 rounded w-20"></div>
+      </div>
+      {/* Buy Button Skeleton */}
+      <div className="w-16 h-8 bg-violet-200 rounded-full"></div>
+    </div>
+  </div>
+);
+// --- END: New Skeleton Component ---
+
+const categories = [
+  "All Categories",
+  "Countries Facebook",
+  "USA Facebook",
+  "UK Facebook",
+  "Nigeria Facebook",
+];
+
+// Define how many skeleton items to show (e.g., 5 cards)
+const SKELETON_COUNT = 5;
 
 export function DashboardContent() {
-  const [selectedCategory, setSelectedCategory] = useState("All Categories")
-  const [dropdownOpen, setDropdownOpen] = useState(false)
+  // We use `null` initially to distinguish between 'not loaded' and 'empty array'
+  const [products, setProducts] = useState<ProductType[] | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState("All Categories");
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(false); // Kept for explicit control
+
+  // 1. Optimization: Memoize data fetching function using useCallback
+  const getProducts = useCallback(async () => {
+    // Only set loading if products are not already loaded to prevent flicker on subsequent non-data-fetching interactions
+    if (!products) {
+      setIsLoading(true);
+    }
+
+    try {
+      const res = await fetch("/api/products", { method: "GET" });
+      const data = await res.json();
+
+      // console.log("data from caller", data);
+
+      if (!res.ok) {
+        toast.error(data.message || "Failed to fetch products.");
+        setProducts([]); // Set to empty array on error
+        return;
+      }
+
+      setProducts(data.data);
+    } catch (error) {
+      toast.error("An unexpected error occurred while loading products.");
+      setProducts([]); // Set to empty array on error
+    } finally {
+      setIsLoading(false);
+    }
+  }, [products]); // Recreate if `products` changes from null to array
+
+  useEffect(() => {
+    getProducts();
+  }, [getProducts]); // Dependency array includes the memoized function
+
+  // 2. Improvement: Implement product filtering logic
+  const filteredProducts = useMemo(() => {
+    if (!products) return [];
+
+    if (selectedCategory === "All Categories") {
+      return products;
+    }
+
+    // Assuming product objects have a 'category' field matching the categories list
+    return products.filter((product) => product.category === selectedCategory);
+  }, [products, selectedCategory]);
+
+  const currentCategoryDisplay = selectedCategory.toUpperCase();
 
   return (
     <div className="space-y-6">
       {/* Banner */}
       <div className="relative rounded-2xl overflow-hidden bg-gradient-to-r from-gray-200 to-gray-300 h-48 lg:h-56">
-        <img src="/megaphone-announcement-marketing-blue-cyan.jpg" alt="Banner" className="w-full h-full object-cover" />
+        <img
+          src="/megaphone-announcement-marketing-blue-cyan.jpg"
+          alt="Banner"
+          className="w-full h-full object-cover"
+        />
         <div className="absolute top-4 left-4">
           <button className="bg-cyan-500 hover:bg-cyan-600 text-white px-6 py-3 rounded-xl flex items-center gap-2 font-medium transition-colors">
             <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
@@ -61,6 +118,7 @@ export function DashboardContent() {
           </button>
         </div>
       </div>
+  
 
       {/* Shop by Categories Dropdown */}
       <div className="relative">
@@ -68,8 +126,12 @@ export function DashboardContent() {
           onClick={() => setDropdownOpen(!dropdownOpen)}
           className="w-full max-w-2xl mx-auto bg-violet-600 hover:bg-violet-700 text-white px-6 py-4 rounded-xl flex items-center justify-center gap-2 font-medium transition-colors"
         >
-          Shop by Categories
-          <ChevronDown className={`w-5 h-5 transition-transform ${dropdownOpen ? "rotate-180" : ""}`} />
+          {selectedCategory}
+          <ChevronDown
+            className={`w-5 h-5 transition-transform ${
+              dropdownOpen ? "rotate-180" : ""
+            }`}
+          />
         </button>
 
         {dropdownOpen && (
@@ -78,11 +140,13 @@ export function DashboardContent() {
               <button
                 key={category}
                 onClick={() => {
-                  setSelectedCategory(category)
-                  setDropdownOpen(false)
+                  setSelectedCategory(category);
+                  setDropdownOpen(false);
                 }}
                 className={`w-full px-6 py-3 text-left hover:bg-gray-50 transition-colors ${
-                  selectedCategory === category ? "bg-violet-50 text-violet-600" : "text-gray-700"
+                  selectedCategory === category
+                    ? "bg-violet-50 text-violet-600 font-semibold"
+                    : "text-gray-700"
                 }`}
               >
                 {category}
@@ -95,29 +159,60 @@ export function DashboardContent() {
       {/* Recent Products */}
       <div>
         <h2 className="text-xl font-semibold text-gray-800 mb-4 flex items-center gap-2">
-          Our Recent Products
+          {selectedCategory === "All Categories"
+            ? "All Products"
+            : currentCategoryDisplay}
           <span className="text-2xl">👌</span>
         </h2>
 
-        {/* Category Header */}
-        <div className="bg-violet-600 text-white px-6 py-3 rounded-t-xl font-medium">COUNTRIES FACEBOOK</div>
+        {/* Category Header (Using the selected category for display) */}
+        <div className="bg-violet-600 text-white px-6 py-3 rounded-t-xl font-medium">
+          {currentCategoryDisplay}
+        </div>
 
-        {/* Products List */}
-        <div className="bg-white rounded-b-xl shadow-sm divide-y divide-gray-100">
-          {products.map((product) => (
-            <ProductCard key={product.id} product={product} />
-          ))}
+        {/* Products List (with Skeleton Loader) */}
+        <div className="bg-white rounded-b-xl shadow-sm divide-y divide-gray-100 min-h-[300px]">
+          {/* SKELETON LOADER IMPLEMENTATION */}
+          {isLoading && products === null ? (
+            // Show skeleton loaders when loading for the first time
+            Array.from({ length: SKELETON_COUNT }).map((_, index) => (
+              <ProductCardSkeleton key={index} />
+            ))
+          ) : filteredProducts.length > 0 ? (
+            // Show filtered products
+            filteredProducts.map((product) => {
+              // 3. Optimization: Clean up data manipulation inside map
+              const formattedProduct = {
+                ...product,
+                price: Number(product.price),
+                stock: Number(product.stock),
+                inStock: Number(product.stock) > 5,
+              };
+              return (
+                <ProductCard key={product.id} product={formattedProduct} />
+              );
+            })
+          ) : (
+            // Show empty state
+            <div className="text-center py-10 text-gray-500">
+              No products found for {selectedCategory}.
+            </div>
+          )}
         </div>
       </div>
 
       {/* Chat Widget */}
       <div className="fixed bottom-6 right-6 z-50">
         <button className="w-14 h-14 bg-gradient-to-r from-pink-500 to-rose-500 rounded-full shadow-lg flex items-center justify-center hover:scale-105 transition-transform">
-          <svg className="w-7 h-7 text-white" viewBox="0 0 24 24" fill="currentColor">
+          <svg
+            className="w-7 h-7 text-white"
+            viewBox="0 0 24 24"
+            fill="currentColor"
+          >
             <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H6l-2 2V4h16v12z" />
           </svg>
         </button>
       </div>
     </div>
-  )
+  );
 }

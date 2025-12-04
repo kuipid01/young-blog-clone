@@ -4,7 +4,7 @@ import { ShoppingCart } from "lucide-react"
 
 interface Product {
   id: number
-  title: string
+  name: string
   price: number
   stock: number
   category: string
@@ -39,7 +39,7 @@ export function ProductCard({ product }: ProductCardProps) {
 
       {/* Product Info */}
       <div className="flex-1 min-w-0">
-        <p className="text-sm text-gray-700 leading-relaxed">{product.title}</p>
+        <p className="text-sm text-gray-700 leading-relaxed">{product.name}</p>
         <div className="flex items-center gap-2 mt-2">
           <span className="bg-violet-600 text-white text-xs px-3 py-1 rounded-md font-medium">
             {formatPrice(product.price)}
