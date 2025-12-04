@@ -10,7 +10,7 @@ export async function POST(request: Request) {
   try {
     const body = await request.json();
     const { details, password } = body; // details can be username or email
-console.log("detaials", details,password, "passowrd");
+    console.log("detaials", details, password, "passowrd");
     // Check if user exists by username OR email
     const userExists = await db
       .select()
