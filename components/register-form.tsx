@@ -19,6 +19,7 @@ import {
   Gift,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 
 export function RegisterForm() {
   const router = useRouter();
@@ -26,28 +27,48 @@ export function RegisterForm() {
   const [showConfirm, setShowConfirm] = useState(false); // NEW
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
-    name: "",
+    username: "",
     email: "",
     password: "",
     confirmPassword: "", // NEW
-    referalCode: "",
+    referralCode: "",
   });
   const [focusedField, setFocusedField] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Prevent submit when unmatched
     if (formData.password !== formData.confirmPassword) {
-      alert("Passwords do not match");
+      toast.error("Passwords do not match");
       return;
     }
 
     setIsLoading(true);
-    router.push("/dashboard");
-    await new Promise((resolve) => setTimeout(resolve, 1500));
 
-    setIsLoading(false);
+    try {
+      const res = await fetch("/api/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(formData),
+      });
+
+      const data = await res.json();
+
+      // ⛔ Handle API errors here
+      if (!res.ok) {
+        toast.error(data.message || "Registration failed");
+        return;
+      }
+
+      // ✅ Success
+      toast.success("Registration successful");
+      router.push("/auth/login");
+    } catch (error) {
+      console.log(error);
+      toast.error("Couldn't proceed — network error");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const passwordStrength = () => {
@@ -93,7 +114,7 @@ export function RegisterForm() {
         {/* Name */}
         <div className="space-y-2">
           <Label htmlFor="name" className="text-sm font-medium text-foreground">
-            Full Name
+            Username
           </Label>
           <div className="relative">
             <div
@@ -106,14 +127,14 @@ export function RegisterForm() {
               <User className="w-5 h-5" />
             </div>
             <Input
-              id="name"
+              id="username"
               type="text"
-              placeholder="Enter your full name"
-              value={formData.name}
+              placeholder="Enter your username"
+              value={formData.username}
               onChange={(e) =>
                 setFormData({
                   ...formData,
-                  name: e.target.value,
+                  username: e.target.value,
                 })
               }
               onFocus={() => setFocusedField("name")}
@@ -121,7 +142,7 @@ export function RegisterForm() {
               className="pl-11 h-12 border-2 border-border bg-muted/30 rounded-xl transition-all duration-200 focus:border-[#6C5CE7] focus:bg-white focus:ring-2 focus:ring-[#6C5CE7]/20"
               required
             />
-            {formData.name.length > 2 && (
+            {formData.username.length > 2 && (
               <div className="absolute right-3 top-1/2 -translate-y-1/2 text-green-500 animate-in fade-in zoom-in duration-200">
                 <Check className="w-5 h-5" />
               </div>
@@ -340,14 +361,14 @@ export function RegisterForm() {
               id="referalCode"
               type="text"
               placeholder="Enter Referal Code"
-              value={formData.referalCode}
+              value={formData.referralCode}
               onChange={(e) =>
                 setFormData({
                   ...formData,
-                  referalCode: e.target.value,
+                  referralCode: e.target.value,
                 })
               }
-              onFocus={() => setFocusedField("referalCode")}
+              onFocus={() => setFocusedField("referralCode")}
               onBlur={() => setFocusedField(null)}
               className="pl-11 pr-11 h-12 border-2 border-border bg-muted/30 rounded-xl transition-all duration-200 focus:border-[#6C5CE7] focus:bg-white focus:ring-2 focus:ring-[#6C5CE7]/20"
               required

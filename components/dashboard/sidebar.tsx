@@ -35,7 +35,7 @@ interface SidebarProps {
 }
 
 export function Sidebar({ isOpen, onClose }: SidebarProps) {
-  const pathname = usePathname() // 👈 get current path
+  const pathname = usePathname() 
 
   return (
     <aside
