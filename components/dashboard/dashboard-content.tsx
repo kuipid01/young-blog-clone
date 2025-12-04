@@ -56,11 +56,7 @@ export function DashboardContent() {
 
   // 1. Optimization: Memoize data fetching function using useCallback
   const getProducts = useCallback(async () => {
-    // Only set loading if products are not already loaded to prevent flicker on subsequent non-data-fetching interactions
-    if (!products) {
-      setIsLoading(true);
-    }
-
+ 
     try {
       const res = await fetch("/api/products", { method: "GET" });
       const data = await res.json();
@@ -80,7 +76,7 @@ export function DashboardContent() {
     } finally {
       setIsLoading(false);
     }
-  }, [products]); // Recreate if `products` changes from null to array
+  }, []); // Recreate if `products` changes from null to array
 
   useEffect(() => {
     getProducts();

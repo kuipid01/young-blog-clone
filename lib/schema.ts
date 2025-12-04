@@ -14,6 +14,9 @@ import {
 import { createId } from "@paralleldrive/cuid2";
 
 export type ProductType = InferSelectModel<typeof product>;
+export type BasePaymentType = InferSelectModel<typeof payments>;
+export type ExtendedPaymentType = BasePaymentType 
+& { id: string; userName: string; userEmail: string }
 
 // --- USERS TABLE (Using CUID for ID) ---
 export const user = pgTable("users", {
@@ -109,6 +112,49 @@ export const wallets = pgTable("wallets", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(), // Good for tracking updates
 });
+
+
+
+
+// --- ORDERS TABLE (New Schema) ---
+export const order = pgTable("orders", {
+  id: varchar("id", { length: 30 })
+    .notNull()
+    .primaryKey()
+    .$defaultFn(() => createId()),
+
+  userId: varchar("user_id", { length: 30 })
+    .notNull()
+    .references(() => user.id),
+
+  productId: varchar("product_id", { length: 30 })
+    .notNull()
+    .references(() => product.id),
+
+  quantity: integer("quantity").notNull().default(1),
+
+  // Store the price at the time of purchase
+  totalPrice: numeric("total_price", { precision: 12, scale: 2 }).notNull(), 
+
+  // Status to manage the poor man's rollback: 'pending_debit', 'completed', 'failed', 'refunded'
+  status: varchar("status", { length: 50, enum: ['pending_debit', 'completed', 'failed', 'refunded'] }).notNull().default('pending_debit'),
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+
+
+export const orderRelations = relations(order, ({ one }) => ({
+  user: one(user, {
+    fields: [order.userId],
+    references: [user.id],
+  }),
+  product: one(product, {
+    fields: [order.productId],
+    references: [product.id],
+  }),
+}));
 
 export const paymentsRelations = relations(payments, ({ one }) => ({
   user: one(user, {

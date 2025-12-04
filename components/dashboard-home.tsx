@@ -1,39 +1,107 @@
 "use client";
 import Link from "next/link";
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import ProfileModal from "./wallet-virtual";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
+import { jwtDecode } from "jwt-decode";
+import { wallets } from "../lib/schema";
+import { WalletCardSkeleton } from "./wallet-card-loader";
 
 const paymentHistory: any[] = [
   // Empty for now - matches "Data not found" state
 ];
 
 export function DashboardHome() {
+  const [userWallet, setuserWallet] = useState<any>(null);
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
+  const [fetchingWallet, setfetchingWallet] = useState(false);
+
+  const getWallet = useCallback(async () => {
+   setfetchingWallet(true)
+    const token = localStorage.getItem("token");
+    if (!token) {
+      toast.error("Authentication expired. Please log in.");
+      router.push("/auth/login");
+      return;
+    }
+
+    let userId: string;
+    try {
+      const decoded: { id: string; exp?: number } = jwtDecode(token);
+
+      // Check token expiration immediately
+      if (decoded.exp && decoded.exp * 1000 < Date.now()) {
+        localStorage.removeItem("token");
+        toast.error("Session expired. Please log in again.");
+        router.push("/auth/login");
+        return;
+      }
+
+      userId = decoded.id;
+    } catch (authError) {
+      // Handle malformed token or decoding failure
+      console.error("Token decoding failed:", authError);
+      localStorage.removeItem("token");
+      toast.error("Invalid session data. Please log in.");
+      router.push("/auth/login");
+      return;
+    }
+    try {
+      const res = await fetch(`/api/wallet/${userId}`, { method: "GET" });
+      const data = await res.json();
+
+      // console.log("data from caller", data);
+
+      if (!res.ok) {
+        toast.error(data.message || "Failed to fetch products.");
+        setuserWallet(null); // Set to empty array on error
+        return;
+      }
+
+      setuserWallet(data);
+    } catch (error) {
+      toast.error("An unexpected error occurred while loading products.");
+      setuserWallet([]); // Set to empty array on error
+    } finally {
+      setfetchingWallet(false);
+    }
+  }, [router]);
+
+  useEffect(() => {
+    getWallet();
+  }, [getWallet]);
+  console.log(userWallet);
   return (
     <div className="space-y-6">
       {/* Top Cards Row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* My Wallet Card */}
-        <div className="bg-linear-to-r from-violet-500 to-purple-600 rounded-2xl p-6 text-white">
-          <h2 className="text-lg font-medium mb-2">My wallet</h2>
-          <p className="text-3xl font-bold mb-6">₦0.00</p>
-          <div className="flex gap-3">
-            <Link
-              href="/dashboard/fund-wallet"
-              className="px-6 py-2.5 bg-white text-gray-800 rounded-lg font-medium hover:bg-gray-100 transition-colors"
-            >
-              Fund Wallet
-            </Link>
-            <Link
-              href="/dashboard/wallet-history"
-              className="px-6 py-2.5 bg-violet-700 text-white rounded-lg font-medium hover:bg-violet-800 transition-colors"
-            >
-              Wallet History
-            </Link>
+        {fetchingWallet ? (
+          <WalletCardSkeleton />
+        ) : (
+          <div className="bg-linear-to-r from-violet-500 to-purple-600 rounded-2xl p-6 text-white">
+            <h2 className="text-lg font-medium mb-2">My wallet</h2>
+            <p className="text-3xl font-bold mb-6">
+              ₦{userWallet?.walletBalance ?? "0.00"}
+            </p>
+            <div className="flex gap-3">
+              <Link
+                href="/dashboard/fund-wallet"
+                className="px-6 py-2.5 bg-white text-gray-800 rounded-lg font-medium hover:bg-gray-100 transition-colors"
+              >
+                Fund Wallet
+              </Link>
+              <Link
+                href="/dashboard/wallet-history"
+                className="px-6 py-2.5 bg-violet-700 text-white rounded-lg font-medium hover:bg-violet-800 transition-colors"
+              >
+                Wallet History
+              </Link>
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Payment Card */}
         <div className="bg-white rounded-2xl p-6 border border-gray-200">
