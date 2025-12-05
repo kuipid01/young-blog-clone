@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "../../../../lib/db";
-import { order } from "../../../../lib/schema";
+import { order, OrderType, product, user } from "../../../../lib/schema";
 import { eq } from "drizzle-orm";
 
 // GET /api/orders/[userId]
@@ -18,16 +18,40 @@ export async function GET(
   }
 
   try {
-    // Using mockDb pattern:
-    const userOrders = await db
-      .select()
+    const rows = await db
+      .select({
+        order: {
+          id: order.id,
+          userId: order.userId,
+          productId: order.productId,
+          quantity: order.quantity,
+          totalPrice: order.totalPrice,
+          status: order.status,
+          createdAt: order.createdAt,
+          updatedAt: order.updatedAt,
+        },
+        product: {
+          id: product.id,
+          name: product.name,
+          price: product.price,
+          stock: product.stock,
+          category: product.category,
+          inStock: product.stock,
+        },
+      })
       .from(order)
+      .innerJoin(product, eq(order.productId, product.id))
       .where(eq(order.userId, userId));
 
-    // Filter the mock data to match the requested userId
-    const filteredOrders = userOrders.filter((o: any) => o.userId === userId);
-
-    return NextResponse.json(filteredOrders, { status: 200 });
+    const formattedData = rows.map((row) => ({
+      ...row.order,
+      product: {
+        ...row.product,
+      },
+    }));
+    
+    // Return directly — already nested
+    return NextResponse.json(formattedData, { status: 200 });
   } catch (error) {
     console.error(`Error fetching orders for user ${userId}:`, error);
     return NextResponse.json(

@@ -14,6 +14,7 @@ import {
 import { createId } from "@paralleldrive/cuid2";
 
 export type ProductType = InferSelectModel<typeof product>;
+export type OrderType = InferSelectModel<typeof order>;
 export type BasePaymentType = InferSelectModel<typeof payments>;
 export type ExtendedPaymentType = BasePaymentType 
 & { id: string; userName: string; userEmail: string }
