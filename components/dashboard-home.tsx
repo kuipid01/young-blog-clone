@@ -7,19 +7,30 @@ import { toast } from "sonner";
 import { jwtDecode } from "jwt-decode";
 import { wallets } from "../lib/schema";
 import { WalletCardSkeleton } from "./wallet-card-loader";
+import { useUserOrders } from "../app/hooks/user-orders";
+import { usePayments } from "../app/hooks/user-payments";
+import clsx from "clsx";
 
 const paymentHistory: any[] = [
   // Empty for now - matches "Data not found" state
 ];
 
 export function DashboardHome() {
+  const { payments } = usePayments();
   const [userWallet, setuserWallet] = useState<any>(null);
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
   const [fetchingWallet, setfetchingWallet] = useState(false);
+  const { orders } = useUserOrders();
+
+  console.log(payments);
+
+  const totalDeposit = payments
+    .filter((payment) => payment.status === "funded")
+    .reduce((acc, val) => Number(val.amount) + acc, 0);
 
   const getWallet = useCallback(async () => {
-   setfetchingWallet(true)
+    setfetchingWallet(true);
     const token = localStorage.getItem("token");
     if (!token) {
       toast.error("Authentication expired. Please log in.");
@@ -72,7 +83,7 @@ export function DashboardHome() {
   useEffect(() => {
     getWallet();
   }, [getWallet]);
-  console.log(userWallet);
+  // console.log(userWallet);
   return (
     <div className="space-y-6">
       {/* Top Cards Row */}
@@ -111,7 +122,8 @@ export function DashboardHome() {
           </h3>
           <button
             onClick={() => {
-              setIsOpen(true);
+              // setIsOpen(true);
+              toast.info("Hey we are working on this feature👌👌👌");
             }}
             className="w-full py-3 bg-linear-to-r from-violet-500 to-purple-600 text-white rounded-lg font-medium hover:from-violet-600 hover:to-purple-700 transition-colors"
           >
@@ -125,7 +137,9 @@ export function DashboardHome() {
         {/* Total Orders Card */}
         <div className="bg-white rounded-2xl p-6 border border-gray-200">
           <p className="text-sm text-gray-500 mb-1">Total Orders</p>
-          <p className="text-3xl font-bold text-gray-900 mb-4">0</p>
+          <p className="text-3xl font-bold text-gray-900 mb-4">
+            {orders?.length ?? 0}
+          </p>
           <button
             onClick={() => {
               router.push("/dashboard/products");
@@ -139,7 +153,9 @@ export function DashboardHome() {
         {/* Total Deposits Card */}
         <div className="bg-white rounded-2xl p-6 border border-gray-200">
           <p className="text-sm text-gray-500 mb-1">Total Deposits</p>
-          <p className="text-3xl font-bold text-gray-900 mb-4">0.00</p>
+          <p className="text-3xl font-bold text-gray-900 mb-4">
+            ₦{totalDeposit ?? "0.00"}
+          </p>
           <button
             onClick={() => {
               router.push("/dashboard/wallet-history");
@@ -177,26 +193,40 @@ export function DashboardHome() {
               </tr>
             </thead>
             <tbody>
-              {paymentHistory.length === 0 ? (
+              {payments.length === 0 ? (
                 <tr>
                   <td colSpan={4} className="py-12 text-center text-gray-500">
                     Data not found
                   </td>
                 </tr>
               ) : (
-                paymentHistory.map((item: any, index: number) => (
+                payments?.slice(0, 8)?.map((item, index: number) => (
                   <tr key={index} className="border-b border-gray-50">
                     <td className="py-4 px-6 text-sm text-gray-600">
-                      {item.trx}
+                      {item.id.slice(0, 4)}
                     </td>
                     <td className="py-4 px-6 text-sm text-gray-600">
-                      {item.time}
+                      {item?.createdAt && (
+                        <span>
+                          {new Date(item?.createdAt).toLocaleString()}
+                        </span>
+                      )}
                     </td>
                     <td className="py-4 px-6 text-sm text-gray-600">
                       {item.amount}
                     </td>
-                    <td className="py-4 px-6 text-sm text-gray-600">
-                      {item.status}
+                    <td>
+                      <button
+                        className={clsx(
+                          " uppercase w-fit h-fit px-3 py-1 font-bold  rounded-md text-sm text-gray-600",
+                          item.status === "funded"
+                            ? "bg-green-500 text-white"
+                            : " bg-red-500 text-white"
+                        )}
+                      >
+                        {" "}
+                        {item.status}
+                      </button>{" "}
                     </td>
                   </tr>
                 ))

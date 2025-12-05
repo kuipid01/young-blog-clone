@@ -5,16 +5,12 @@ import { db } from "@/lib/db";
 import { eq } from "drizzle-orm";
 import { payments } from "../../../../lib/schema";
 
-// Define the expected path parameters
-interface Context {
-  params: {
-    userId: string;
-  };
-}
-
-export async function GET(req: NextRequest, context: Context) {
+export async function GET(
+  req: Request,
+  ctx: RouteContext<"/api/wallet/[userId]">
+) {
   try {
-    const { userId } = context.params;
+    const { userId } = await ctx.params;
 
     if (!userId) {
       return NextResponse.json(
@@ -38,10 +34,7 @@ export async function GET(req: NextRequest, context: Context) {
 
     return NextResponse.json(userPayments, { status: 200 });
   } catch (error) {
-    console.error(
-      `Error fetching payments for user ${context.params.userId}:`,
-      error
-    );
+    console.error(`Error fetching payments for user `, error);
     return NextResponse.json(
       { message: "Internal Server Error" },
       { status: 500 }

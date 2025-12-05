@@ -3,13 +3,13 @@
 import Link from "next/link";
 import { Menu } from "lucide-react";
 import { useUserWallet } from "../../app/utils/get-wallet";
+import AvatarMenu from "../logout-menu";
 
 interface HeaderProps {
   onMenuClick: () => void;
 }
 
 export function Header({ onMenuClick }: HeaderProps) {
-
   const { wallet, loading, refetchWallet } = useUserWallet();
   return (
     <header className="bg-white border-b border-gray-100 px-4 py-3">
@@ -26,15 +26,13 @@ export function Header({ onMenuClick }: HeaderProps) {
           {/* Logo for header */}
           <Link href="/dashboard" className="flex items-center gap-2">
             <div className="w-8 h-8 bg-violet-600 rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-sm">YB</span>
+              <span className="text-white font-bold text-sm">JM</span>
             </div>
             <div className="hidden sm:flex flex-col">
               <span className="text-xs font-semibold text-violet-600 leading-tight">
-                Young
+                Jemil
               </span>
-              <span className="text-xs font-semibold text-violet-600 leading-tight">
-                Blog
-              </span>
+            
               <span className="text-[9px] text-gray-500 leading-tight">
                 Marketplace
               </span>
@@ -51,13 +49,7 @@ export function Header({ onMenuClick }: HeaderProps) {
           </div>
 
           {/* User Avatar */}
-          <button className="w-10 h-10 rounded-full overflow-hidden border-2 border-gray-200">
-            <img
-              src="/3d-avatar-blue-character.jpg"
-              alt="User avatar"
-              className="w-full h-full object-cover"
-            />
-          </button>
+          <AvatarMenu />
         </div>
       </div>
     </header>
