@@ -138,19 +138,41 @@ export async function POST(req: Request) {
       .where(eq(product.id, productId));
 
     // --- STEP 5: FINALIZATION: Complete the Order ---
-    const [finalOrder] = await db
+    const [updatedOrder] = await db
       .update(order)
       .set({ status: "completed", updatedAt: sql`now()` })
       .where(eq(order.id, orderId))
-      .returning();
+      .returning({ id: order.id });
+
+    console.log("GOT HERE before finalorderlog");
+    // --- STEP 5.5: Fetch the Final Order with Joined Log Data ---
+    // --- STEP 5.5: Fetch the Final Order with Joined Log Data ---
+    const [finalOrderWithLog] = await db
+      .select({
+        order: order,
+        log: {
+          id: logs.id,
+          logDetails: logs.logDetails,
+          status: logs.status,
+        },
+      })
+      .from(order)
+      .leftJoin(logs, eq(order.logId, logs.id)) // Perform the Left Join on order.logId = logs.id
+      .where(eq(order.id, updatedOrder.id));
+    console.log("GOT HERE after finalorderlog");
+    if (!finalOrderWithLog) {
+      throw new Error("Failed to retrieve final order after update.");
+    }
 
     // --- STEP 6: Side Effect ---
-    await sendMailToAdmin(finalOrder);
+    await sendMailToAdmin(finalOrderWithLog);
+
+    // ... use finalOrderWithLog in the response:
 
     return NextResponse.json(
       {
         message: "Order created, wallet debited, and log used successfully.",
-        order: finalOrder,
+        order: finalOrderWithLog,
       },
       { status: 201 }
     );
@@ -196,7 +218,7 @@ export async function POST(req: Request) {
         if (logToUseId) {
           await db
             .update(logs)
-            .set({ status: "unused"}) 
+            .set({ status: "unused" })
             .where(eq(logs.id, logToUseId));
 
           console.log(`Log ${logToUseId} reset to UNUSED.`);
