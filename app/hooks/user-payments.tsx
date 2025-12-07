@@ -27,7 +27,7 @@ export function usePayments() {
       const data = await res.json();
 
       if (!res.ok) {
-        toast.error(data.message || "Failed to fetch payments.");
+        // toast.error(data.message || "Failed to fetch payments.");
         setPayments([]); // Reset on error
         return;
       }

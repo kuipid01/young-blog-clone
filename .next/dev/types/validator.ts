@@ -155,6 +155,24 @@ type RouteHandlerConfig<Route extends AppRouteHandlerRoutes = AppRouteHandlerRou
   type __Unused = __Check
 }
 
+// Validate ../../../app/api/bonuses/[userId]/route.ts
+{
+  type __IsExpected<Specific extends RouteHandlerConfig<"/api/bonuses/[userId]">> = Specific
+  const handler = {} as typeof import("../../../app/api/bonuses/[userId]/route.js")
+  type __Check = __IsExpected<typeof handler>
+  // @ts-ignore
+  type __Unused = __Check
+}
+
+// Validate ../../../app/api/generate-refferal-code/route.ts
+{
+  type __IsExpected<Specific extends RouteHandlerConfig<"/api/generate-refferal-code">> = Specific
+  const handler = {} as typeof import("../../../app/api/generate-refferal-code/route.js")
+  type __Check = __IsExpected<typeof handler>
+  // @ts-ignore
+  type __Unused = __Check
+}
+
 // Validate ../../../app/api/login/route.ts
 {
   type __IsExpected<Specific extends RouteHandlerConfig<"/api/login">> = Specific
@@ -209,10 +227,28 @@ type RouteHandlerConfig<Route extends AppRouteHandlerRoutes = AppRouteHandlerRou
   type __Unused = __Check
 }
 
+// Validate ../../../app/api/referrals/[userId]/route.ts
+{
+  type __IsExpected<Specific extends RouteHandlerConfig<"/api/referrals/[userId]">> = Specific
+  const handler = {} as typeof import("../../../app/api/referrals/[userId]/route.js")
+  type __Check = __IsExpected<typeof handler>
+  // @ts-ignore
+  type __Unused = __Check
+}
+
 // Validate ../../../app/api/register/route.ts
 {
   type __IsExpected<Specific extends RouteHandlerConfig<"/api/register">> = Specific
   const handler = {} as typeof import("../../../app/api/register/route.js")
+  type __Check = __IsExpected<typeof handler>
+  // @ts-ignore
+  type __Unused = __Check
+}
+
+// Validate ../../../app/api/users/[userId]/route.ts
+{
+  type __IsExpected<Specific extends RouteHandlerConfig<"/api/users/[userId]">> = Specific
+  const handler = {} as typeof import("../../../app/api/users/[userId]/route.js")
   type __Check = __IsExpected<typeof handler>
   // @ts-ignore
   type __Unused = __Check

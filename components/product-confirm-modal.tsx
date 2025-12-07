@@ -77,7 +77,7 @@ export function PurchaseConfirmModal({
         return;
       }
 
-      toast.success("Order created successfully!");
+      toast.success("Order made succesffuly , check order page for log!");
       setOpen(false);
     } catch (error) {
       console.error(error);

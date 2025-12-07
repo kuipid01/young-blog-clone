@@ -9,15 +9,21 @@ import {
   timestamp,
   integer,
   boolean,
+  pgEnum,
 } from "drizzle-orm/pg-core";
 
 import { createId } from "@paralleldrive/cuid2";
 
+export const logStatusEnum = pgEnum("log_status", ["used", "unused"]);
 export type ProductType = InferSelectModel<typeof product>;
-export type OrderType = InferSelectModel<typeof order>;
+export type LogType = InferSelectModel<typeof logs>;
 export type BasePaymentType = InferSelectModel<typeof payments>;
-export type ExtendedPaymentType = BasePaymentType 
-& { id: string; userName: string; userEmail: string }
+export type UserType = InferSelectModel<typeof user>;
+export type ExtendedPaymentType = BasePaymentType & {
+  id: string;
+  userName: string;
+  userEmail: string;
+};
 
 // --- USERS TABLE (Using CUID for ID) ---
 export const user = pgTable("users", {
@@ -30,7 +36,48 @@ export const user = pgTable("users", {
   username: text("username"),
   email: text("email"),
   password: text("password"),
-  referralCode: text("referralCode"),
+  referralCode: varchar("referralCode", { length: 50 }).unique().notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// REFERRALS TABLE
+export const referrals = pgTable("referrals", {
+  id: varchar("id", { length: 30 })
+    .primaryKey()
+    .$defaultFn(() => createId()),
+
+  referredUserId: varchar("referred_user_id", { length: 30 })
+    .notNull()
+    .references(() => user.id),
+
+  referrerUserId: varchar("referrer_user_id", { length: 30 })
+    .notNull()
+    .references(() => user.id),
+
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// BONUSES TABLE
+export const bonuses = pgTable("bonuses", {
+  id: varchar("id", { length: 30 })
+    .primaryKey()
+    .$defaultFn(() => createId()),
+
+  referrerUserId: varchar("referrer_user_id", { length: 30 })
+    .notNull()
+    .references(() => user.id),
+
+  referredUserId: varchar("referred_user_id", { length: 30 })
+    .notNull()
+    .references(() => user.id),
+
+  paymentId: varchar("payment_id", { length: 30 })
+    .notNull()
+    .references(() => payments.id),
+  status: text("status"),
+  bonusAmount: numeric("bonus_amount").notNull(),
+
+  createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
 // --- PRODUCTS TABLE (Using CUID for ID) ---
@@ -114,9 +161,37 @@ export const wallets = pgTable("wallets", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(), // Good for tracking updates
 });
 
+export const logs = pgTable("logs", {
+  id: varchar("id", { length: 30 })
+    .notNull()
+    .primaryKey()
+    .$defaultFn(() => createId()),
 
+  // Log Details: The descriptive string column
+  logDetails: text("log_details").notNull(),
 
+  // Status Field: Using the defined enum
+  status: logStatusEnum("status").default("unused").notNull(),
 
+  // Relationship with Product (One-to-Many: Multiple logs per product)
+  productId: varchar("product_id")
+    .notNull()
+    .references(() => product.id),
+
+  // orderId: varchar("order_id")
+  //   .references(() => order.id)
+  //   .unique(),
+
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+// 3. Define the Relations
+export const logsRelations = relations(logs, ({ one }) => ({
+  // Define the 'one' relationship back to the product
+  product: one(product, {
+    fields: [logs.productId],
+    references: [product.id],
+  }),
+}));
 // --- ORDERS TABLE (New Schema) ---
 export const order = pgTable("orders", {
   id: varchar("id", { length: 30 })
@@ -132,19 +207,24 @@ export const order = pgTable("orders", {
     .notNull()
     .references(() => product.id),
 
+  logId: varchar("log_id", { length: 30 })
+    .notNull()
+    .references(() => logs.id),
+
   quantity: integer("quantity").notNull().default(1),
 
-  // Store the price at the time of purchase
-  totalPrice: numeric("total_price", { precision: 12, scale: 2 }).notNull(), 
+  totalPrice: numeric("total_price", { precision: 12, scale: 2 }).notNull(),
 
-  // Status to manage the poor man's rollback: 'pending_debit', 'completed', 'failed', 'refunded'
-  status: varchar("status", { length: 50, enum: ['pending_debit', 'completed', 'failed', 'refunded'] }).notNull().default('pending_debit'),
-  
+  status: varchar("status", {
+    length: 50,
+    enum: ["pending_debit", "completed", "failed", "refunded"],
+  })
+    .notNull()
+    .default("pending_debit"),
+
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
-
-
 
 export const orderRelations = relations(order, ({ one }) => ({
   user: one(user, {
@@ -155,6 +235,7 @@ export const orderRelations = relations(order, ({ one }) => ({
     fields: [order.productId],
     references: [product.id],
   }),
+  log: one(logs),
 }));
 
 export const paymentsRelations = relations(payments, ({ one }) => ({
@@ -181,4 +262,9 @@ export const userRelations = relations(user, ({ many, one }) => ({
     fields: [user.id],
     references: [wallets.userId],
   }),
+}));
+
+export const productsRelations = relations(product, ({ many }) => ({
+  // Define the 'many' relationship to logs (One Product has Many Logs)
+  logs: many(logs),
 }));

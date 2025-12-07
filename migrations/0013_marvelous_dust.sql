@@ -1,0 +1,1 @@
+ALTER TABLE "bonuses" ADD COLUMN "status" text;

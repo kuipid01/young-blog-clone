@@ -1,7 +1,7 @@
-"use client"
+"use client";
 
-import Link from "next/link"
-import { usePathname } from "next/navigation" // 👈 App Router hook
+import Link from "next/link";
+import { usePathname } from "next/navigation"; // 👈 App Router hook
 import {
   Home,
   ShoppingCart,
@@ -13,7 +13,8 @@ import {
   Users,
   X,
   FeatherIcon,
-} from "lucide-react"
+} from "lucide-react";
+import { useGetLoggedInUser } from "../../app/hooks/use-get-logged-in-user";
 
 const navItems = [
   { icon: Home, label: "Dashboard", href: "/dashboard" },
@@ -21,22 +22,30 @@ const navItems = [
   { icon: Wallet, label: "Fund Wallet", href: "/dashboard/fund-wallet" },
   { icon: ClipboardList, label: "My Orders", href: "/dashboard/orders" },
   { icon: AlertTriangle, label: "Rules", href: "/dashboard/rules" },
-   { icon: FeatherIcon, label: "Referral", href: "/dashboard/referral" },
+  { icon: FeatherIcon, label: "Referral", href: "/dashboard/referral" },
   { icon: FileText, label: "Terms Of Use", href: "/dashboard/terms" },
-  { icon: MessageSquare, label: "Verify SMS", href: "/dashboard/verify-sms" },
-  { icon: Users, label: "Join Group 1", href: "#" },
-  { icon: Users, label: "Join Group 2", href: "#" },
- 
-]
+  // { icon: MessageSquare, label: "Verify SMS", href: "/dashboard/verify-sms" },
+  {
+    icon: Users,
+    label: "Join Group 1",
+    href: "https://chat.whatsapp.com/IAY8S3MwOldJkreKDT8j1M?mode=hqrt2",
+  },
+  {
+    icon: Users,
+    label: "Join Group 2",
+    href: "https://chat.whatsapp.com/LXX7YogyrCY00kvHPylUTA",
+  },
+];
 
 interface SidebarProps {
-  isOpen: boolean
-  onClose: () => void
+  isOpen: boolean;
+  onClose: () => void;
 }
 
 export function Sidebar({ isOpen, onClose }: SidebarProps) {
-  const pathname = usePathname() 
+  const pathname = usePathname();
 
+  const { user, loading } = useGetLoggedInUser();
   return (
     <aside
       className={`fixed top-0 left-0 z-50 h-full w-72 bg-white shadow-lg transform transition-transform duration-300 lg:translate-x-0 ${
@@ -51,11 +60,18 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
               <span className="text-white font-bold text-lg">JM</span>
             </div>
             <div className="flex flex-col">
-              <span className="text-xs font-semibold text-violet-600 leading-tight">JEMIL</span>
-              <span className="text-[10px] text-gray-500 leading-tight">Marketplace</span>
+              <span className="text-xs font-semibold text-violet-600 leading-tight">
+                JEMIL
+              </span>
+              <span className="text-[10px] text-gray-500 leading-tight">
+                Marketplace
+              </span>
             </div>
           </Link>
-          <button onClick={onClose} className="lg:hidden p-2 hover:bg-gray-100 rounded-lg">
+          <button
+            onClick={onClose}
+            className="lg:hidden p-2 hover:bg-gray-100 rounded-lg"
+          >
             <X className="w-5 h-5 text-gray-500" />
           </button>
         </div>
@@ -64,7 +80,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
         <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
           {navItems.map((item) => {
             const isActive =
-              item.href !== "#" && pathname.startsWith(item.href) 
+              item.href !== "#" && pathname.startsWith(item.href);
 
             return (
               <Link
@@ -79,7 +95,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                 <item.icon className="w-5 h-5" />
                 <span>{item.label}</span>
               </Link>
-            )
+            );
           })}
         </nav>
 
@@ -89,14 +105,22 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
             <h3 className="font-semibold text-gray-800 mb-3">Help Center</h3>
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-violet-500 rounded-full flex items-center justify-center">
-                <span className="text-white text-sm font-medium">K</span>
+                <span className="text-white text-sm font-medium">
+                  {user?.username?.charAt(1)}
+                </span>
               </div>
               <div className="flex-1">
-                <p className="text-sm font-medium text-gray-800">kuipid</p>
-                <p className="text-xs text-gray-500">kuipid01@gmail.com</p>
+                <p className="text-sm font-medium text-gray-800">
+                  {user?.username}
+                </p>
+                <p className="text-xs text-gray-500"> {user?.email}</p>
               </div>
               <button className="p-2 hover:bg-white/50 rounded-lg">
-                <svg className="w-5 h-5 text-gray-500" viewBox="0 0 24 24" fill="currentColor">
+                <svg
+                  className="w-5 h-5 text-gray-500"
+                  viewBox="0 0 24 24"
+                  fill="currentColor"
+                >
                   <rect x="3" y="3" width="7" height="7" rx="1" />
                   <rect x="14" y="3" width="7" height="7" rx="1" />
                   <rect x="3" y="14" width="7" height="7" rx="1" />
@@ -108,5 +132,5 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
         </div>
       </div>
     </aside>
-  )
+  );
 }

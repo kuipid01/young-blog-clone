@@ -10,7 +10,6 @@ import {
   ChevronDown,
   X,
 } from "lucide-react";
-import { OrderType } from "../lib/schema";
 import { toast } from "sonner";
 import { useGetLoggedInUserId } from "../app/utils/getloggedinuser";
 
@@ -23,6 +22,11 @@ interface Order {
     stock: string;
     category: string;
     inStock: string;
+  };
+  log: {
+    id: string;
+    logDetails: string;
+    status: "used"|"unused";
   };
   format: string;
   quantity: number;
@@ -95,7 +99,7 @@ export function OrdersContent() {
       statusFilter === "all" || order.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
-
+  console.log(selectedOrder, "selected order");
   const getStatusBadge = (status: Order["status"]) => {
     switch (status) {
       case "completed":
@@ -167,7 +171,7 @@ export function OrdersContent() {
 
   const totalSpent = orders
     ?.filter((o) => o.status === "completed")
-    .reduce((sum, o) => sum + o.totalPrice, 0);
+    .reduce((sum, o) => sum + Number(o.totalPrice), 0);
   const totalOrders = orders?.length;
   const completedOrders = orders?.filter(
     (o) => o.status === "completed"
@@ -437,12 +441,12 @@ export function OrdersContent() {
                 </div>
               </div>
 
-              <div>
+              <div className="bg-gray-100 rounded-md px-2 text-bold py-2">
                 <p className="text-sm font-medium text-gray-500">
                   Delivery Format
                 </p>
                 <code className="text-sm text-gray-700 bg-gray-100 p-2 rounded-md inline-block mt-1">
-                  {selectedOrder.format}
+                 {selectedOrder?.log?.logDetails} 
                 </code>
               </div>
             </div>

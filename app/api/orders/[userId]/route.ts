@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "../../../../lib/db";
-import { order, OrderType, product, user } from "../../../../lib/schema";
+import { logs, order, product, user } from "../../../../lib/schema";
 import { eq } from "drizzle-orm";
 
 // GET /api/orders/[userId]
@@ -38,9 +38,15 @@ export async function GET(
           category: product.category,
           inStock: product.stock,
         },
+        logs: {
+          id:logs.id,
+          logDetails: logs.logDetails,
+          status:logs.status
+        },
       })
       .from(order)
       .innerJoin(product, eq(order.productId, product.id))
+      .innerJoin(logs, eq(order.logId, logs.id))
       .where(eq(order.userId, userId));
 
     const formattedData = rows.map((row) => ({
@@ -48,6 +54,9 @@ export async function GET(
       product: {
         ...row.product,
       },
+      log:{
+        ...row.logs
+      }
     }));
     
     // Return directly — already nested

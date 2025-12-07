@@ -371,7 +371,7 @@ export function RegisterForm() {
               onFocus={() => setFocusedField("referralCode")}
               onBlur={() => setFocusedField(null)}
               className="pl-11 pr-11 h-12 border-2 border-border bg-muted/30 rounded-xl transition-all duration-200 focus:border-[#6C5CE7] focus:bg-white focus:ring-2 focus:ring-[#6C5CE7]/20"
-              required
+              
             />
           </div>
         </div>

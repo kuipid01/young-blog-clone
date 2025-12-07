@@ -1,6 +1,6 @@
 // lib/schema.ts (Ensure this structure)
 
-import { payments, paymentsRelations, product, user, userRelations, wallets, walletsRelations } from './schema';
+import { logs, payments, paymentsRelations, product, user, userRelations, wallets, walletsRelations } from './schema';
 
 // ... (your table definitions: user, product, payments, wallets) ...
 
@@ -14,7 +14,7 @@ export const schema = {
     wallets,
     user,
     product,
-    
+    logs,
 
 
     paymentsRelations,

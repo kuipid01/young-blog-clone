@@ -3,6 +3,8 @@
 import { ShoppingCart } from "lucide-react";
 import { PurchaseConfirmModal } from "../product-confirm-modal";
 import { useState } from "react";
+import { useUserWallet } from "../../app/utils/get-wallet";
+import { toast } from "sonner";
 
 export interface Product {
   id: string;
@@ -18,8 +20,8 @@ interface ProductCardProps {
 }
 
 export function ProductCard({ product }: ProductCardProps) {
-
-    const [open, setOpen] = useState(false)
+  const { wallet, loading, refetchWallet } = useUserWallet();
+  const [open, setOpen] = useState(false);
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat("en-NG", {
       style: "currency",
@@ -33,7 +35,7 @@ export function ProductCard({ product }: ProductCardProps) {
   return (
     <div className="p-4 lg:p-6 flex flex-col lg:flex-row lg:items-center gap-4">
       {/* Facebook Icon */}
-      <div className="flex-shrink-0">
+      <div className="shrink-0">
         <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
           <svg
             className="w-7 h-7 text-blue-600"
@@ -59,11 +61,17 @@ export function ProductCard({ product }: ProductCardProps) {
       </div>
 
       {/* Action Button */}
-      <div className="flex-shrink-0">
+      <div className="shrink-0">
         {product.inStock ? (
           <button
-            onClick={() => setOpen(true)}
-           
+            onClick={async () => {
+              refetchWallet();
+              if (parseFloat(wallet?.walletBalance) > Number(product.price)) {
+                setOpen(true);
+              } else {
+                toast.error("Please fund your account to make purchase");
+              }
+            }}
             className="bg-violet-600 hover:bg-violet-700 text-white p-3 rounded-xl transition-colors"
           >
             <ShoppingCart className="w-5 h-5" />

@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import { ChevronDown, Monitor } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import clsx from "clsx";
+import { usePayments } from "../app/hooks/user-payments";
 
 const paymentHistory = [
   {
@@ -18,6 +20,7 @@ const paymentHistory = [
 ];
 
 export function FundWalletContent() {
+    const { payments } = usePayments();
   const router = useRouter();
   const [amount, setAmount] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("");
@@ -45,7 +48,9 @@ export function FundWalletContent() {
           Top up your wallet easily
         </h1>
 
-        <button className="px-6 py-2.5 bg-gray-900 text-white rounded-lg font-medium hover:bg-gray-800 transition-colors mb-8">
+        <button onClick={() => {
+          toast.info("Tutorial been made👍👍")
+        }} className="px-6 py-2.5 bg-gray-900 text-white rounded-lg font-medium hover:bg-gray-800 transition-colors mb-8">
           Learn how to fund your wallet
         </button>
 
@@ -119,15 +124,17 @@ export function FundWalletContent() {
             Latest Payments History
           </h3>
         </div>
+        <div className="bg-white rounded-2xl border border-gray-200">
+       
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
               <tr className="border-b border-gray-100">
                 <th className="text-left py-4 px-6 text-sm font-semibold text-gray-700">
-                  ACTION | GATEWAY | TRX
+                  TRX
                 </th>
                 <th className="text-left py-4 px-6 text-sm font-semibold text-gray-700">
-                  TYPE
+                  TIME
                 </th>
                 <th className="text-left py-4 px-6 text-sm font-semibold text-gray-700">
                   AMOUNT
@@ -135,43 +142,51 @@ export function FundWalletContent() {
                 <th className="text-left py-4 px-6 text-sm font-semibold text-gray-700">
                   STATUS
                 </th>
-                <th className="text-left py-4 px-6 text-sm font-semibold text-gray-700">
-                  ACTION
-                </th>
               </tr>
             </thead>
             <tbody>
-              {paymentHistory.map((item, index) => (
-                <tr key={index} className="border-b border-gray-50">
-                  <td className="py-4 px-6">
-                    <p className="text-sm font-medium text-gray-900">
-                      {item.action}
-                    </p>
-                    <p className="text-sm text-gray-500">{item.gateway}</p>
-                  </td>
-                  <td className="py-4 px-6">
-                    <p className="text-sm text-gray-900">{item.type}</p>
-                    <p className="text-sm text-gray-500">{item.timeAgo}</p>
-                  </td>
-                  <td className="py-4 px-6">
-                    <p className="text-sm text-gray-900">{item.amount}</p>
-                    <p className="text-sm font-medium text-gray-900">
-                      {item.total}
-                    </p>
-                  </td>
-                  <td className="py-4 px-6">
-                    <span className="text-sm text-gray-600">{item.status}</span>
-                  </td>
-                  <td className="py-4 px-6">
-                    <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-                      <Monitor className="w-5 h-5 text-gray-500" />
-                    </button>
+              {payments.length === 0 ? (
+                <tr>
+                  <td colSpan={4} className="py-12 text-center text-gray-500">
+                    Data not found
                   </td>
                 </tr>
-              ))}
+              ) : (
+                payments?.slice(0, 8)?.map((item, index: number) => (
+                  <tr key={index} className="border-b border-gray-50">
+                    <td className="py-4 px-6 text-sm text-gray-600">
+                      {item.id.slice(0, 4)}
+                    </td>
+                    <td className="py-4 px-6 text-sm text-gray-600">
+                      {item?.createdAt && (
+                        <span>
+                          {new Date(item?.createdAt).toLocaleString()}
+                        </span>
+                      )}
+                    </td>
+                    <td className="py-4 px-6 text-sm text-gray-600">
+                      {item.amount}
+                    </td>
+                    <td>
+                      <button
+                        className={clsx(
+                          " uppercase w-fit h-fit px-3 py-1 font-bold  rounded-md text-sm text-gray-600",
+                          item.status === "funded"
+                            ? "bg-green-500 text-white"
+                            : " bg-red-500 text-white"
+                        )}
+                      >
+                        {" "}
+                        {item.status}
+                      </button>{" "}
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
+      </div>
       </div>
     </div>
   );

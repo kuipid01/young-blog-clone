@@ -23,10 +23,9 @@ export function DashboardHome() {
   const [fetchingWallet, setfetchingWallet] = useState(false);
   const { orders } = useUserOrders();
 
-  console.log(payments);
+  // console.log(payments);
 
-  const totalDeposit = payments
-    .filter((payment) => payment.status === "funded")
+  const totalDeposit = payments?.filter((payment) => payment.status === "funded")
     .reduce((acc, val) => Number(val.amount) + acc, 0);
 
   const getWallet = useCallback(async () => {
@@ -66,7 +65,7 @@ export function DashboardHome() {
       // console.log("data from caller", data);
 
       if (!res.ok) {
-        toast.error(data.message || "Failed to fetch products.");
+        toast.error(data.message || "Failed to fetch wallet.");
         setuserWallet(null); // Set to empty array on error
         return;
       }
