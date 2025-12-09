@@ -2,9 +2,11 @@
 
 import { ShoppingCart } from "lucide-react";
 import { PurchaseConfirmModal } from "../product-confirm-modal";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useUserWallet } from "../../app/utils/get-wallet";
 import { toast } from "sonner";
+import { getNigerianPrice } from "../../app/utils/get-nigerian-price";
+import { get } from "http";
 
 export interface Product {
   id: string;
@@ -32,6 +34,17 @@ export function ProductCard({ product }: ProductCardProps) {
       .replace("NGN", "₦");
   };
 
+  const [priceState, setPriceState] = useState("");
+  const getPriceInNaira = async () => {
+    const nairaPrice = await getNigerianPrice(product.price);
+    setPriceState(formatPrice(Number(nairaPrice)));
+  };
+
+  useEffect(() => {
+    getPriceInNaira();
+  }, [product.price]);
+
+  const priceInNaira = priceState || 0;
   return (
     <div className="p-4 lg:p-6 flex flex-col lg:flex-row lg:items-center gap-4">
       {/* Facebook Icon */}
@@ -52,7 +65,7 @@ export function ProductCard({ product }: ProductCardProps) {
         <p className="text-sm text-gray-700 leading-relaxed">{product.name}</p>
         <div className="flex items-center gap-2 mt-2">
           <span className="bg-violet-600 text-white text-xs px-3 py-1 rounded-md font-medium">
-            {formatPrice(product.price)}
+            {formatPrice(Number(priceInNaira))}
           </span>
           <span className="bg-gray-800 text-white text-xs px-3 py-1 rounded-md font-medium">
             {product.stock}pcs

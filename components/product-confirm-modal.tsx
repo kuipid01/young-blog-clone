@@ -13,7 +13,7 @@ import { Dispatch, SetStateAction, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { jwtDecode } from "jwt-decode";
 import { Product } from "./dashboard/product-card";
-import { Loader2, CheckCircle, Package } from "lucide-react"; // Added icons
+import { Loader2, CheckCircle, Package, Copy } from "lucide-react"; // Added icons
 import { Separator } from "@/components/ui/separator"; // Assuming you have this Shadcn component
 
 // Define a minimal Order structure for better type safety
@@ -25,6 +25,7 @@ interface Order {
     logDetails: string;
     // ... potentially other log fields
   };
+  data: string[]; // In case multiple logs are returned
 }
 
 interface PurchaseConfirmModalProps {
@@ -33,19 +34,23 @@ interface PurchaseConfirmModalProps {
   product: Product;
 }
 
-export function PurchaseConfirmModal({ open, setOpen, product }: PurchaseConfirmModalProps) {
+export function PurchaseConfirmModal({
+  open,
+  setOpen,
+  product,
+}: PurchaseConfirmModalProps) {
+  if (!product) return null;
   // Use the new Order interface
-  const [order, setOrder] = useState<Order | null>(null); 
+  const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(false);
   const router = useRouter();
-
+  console.log(order, "order returned");
   // Reset state when the dialog is opened for a new purchase attempt
   useEffect(() => {
     if (open) {
       setOrder(null);
     }
   }, [open]);
-
 
   const handleConfirm = async () => {
     setLoading(true);
@@ -79,33 +84,57 @@ export function PurchaseConfirmModal({ open, setOpen, product }: PurchaseConfirm
         router.push("/auth/login");
         return;
       }
-
+      // Create FormData
+      const formData = new FormData();
+      formData.append("action", "buyProduct");
+      formData.append("id", product.id);
+      formData.append("amount", "1");
+      //call external api then use data returned to create order with log id
+      const externalRes = await fetch("/api/shop-products/buy", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        body: formData, // Send FormData directly
+      });
+      if (!externalRes.ok) {
+        const errorData = await externalRes.json();
+        toast.error(errorData.message || "Purchase failed at external API.");
+        return;
+      }
+      const externalData = await externalRes.json();
+      console.log("External API response data:", externalData);
       // ---- API CALL ----
       const res = await fetch("/api/orders", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           // Use 'Authorization' header for the API call
-          Authorization: `Bearer ${token}`, 
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
           userId,
           productId: product.id,
-          quantity: 1, // Assuming quantity is 1 for log purchases
+          quantity: 1,
+          status: externalData.status.toString(),
+          trans_id: externalData.trans_id.toString(),
+          data: externalData.data,
+          price: product.price.toString(),
+          stock: "1",
         }),
       });
-      
+
       const data = await res.json();
 
       // Check for success key or standard failure (res.ok is false)
-      if (!res.ok || (data.success === false)) {
+      if (!res.ok || data.success === false) {
         toast.error(data.message || "Order failed due to an unknown error.");
         return;
       }
 
       // 1. Destructure the 'order' object (which now includes the log) and message
       const { order: finalOrder, message } = data;
-      
+
       // 2. Set the state with the final order data
       setOrder(finalOrder);
 
@@ -113,7 +142,6 @@ export function PurchaseConfirmModal({ open, setOpen, product }: PurchaseConfirm
       toast.success(message || "Order created and log successfully assigned!", {
         description: `Order ID: ${finalOrder.id}. Log details are now available.`,
       });
-
     } catch (error) {
       console.error(error);
       toast.error("An unexpected network error occurred.");
@@ -125,31 +153,54 @@ export function PurchaseConfirmModal({ open, setOpen, product }: PurchaseConfirm
   const handleClose = () => {
     setOpen(false);
     // Optional: Refresh the dashboard/product list if stock needs to update immediately
-    // router.refresh(); 
-  }
+    // router.refresh();
+  };
 
   // --- Rendering Logic ---
-
+  const handleCopy = () => {
+    navigator.clipboard
+      .writeText(order?.data.join("") || order?.log?.logDetails || "")
+      .then(() => {
+        toast.success("Log copied to clipboard!");
+      })
+      .catch((err) => {
+        console.error("Could not copy text: ", err);
+        toast.error("Failed to copy log.");
+      });
+  };
+  const logDetails = order?.log?.logDetails || order?.data[0] || "";
   // Renders the content after a successful order
   const renderSuccessView = () => (
-    <div className="space-y-4 pt-2 text-center">
+    <div className="space-y-4 sm:max-w-[425px]  pt-2 text-center">
       <CheckCircle className="w-12 h-12 text-green-500 mx-auto" />
       <h2 className="text-xl font-bold">Order Successful!</h2>
       <p className="text-sm text-muted-foreground">
-        Order <strong className="font-mono">{order?.id}</strong> is complete. A log has been assigned to your purchase.
+        Order <strong className="font-mono">{order?.id}</strong> is complete. A
+        log has been assigned to your purchase.
       </p>
 
       <Separator />
 
-      <div className="text-left bg-gray-50 dark:bg-gray-800 p-4 rounded-md space-y-2">
-        <h1 className="text-lg font-semibold flex items-center gap-2 text-primary/80">
+      <div className="text-left  bg-gray-50 dark:bg-gray-800 p-4 rounded-md space-y-2">
+        <div className="flex justify-between items-center">
+          <h1 className="text-lg font-semibold flex items-center gap-2 text-primary/80">
             <Package className="w-4 h-4" /> Log Details:
-        </h1>
-        <p className="text-sm font-mono whitespace-pre-wrap text-gray-700 dark:text-gray-300">
-            {order?.log?.logDetails || "Log details not available."}
+          </h1>
+
+          {/* 📋 The Copy Button */}
+          <button
+            onClick={handleCopy}
+            aria-label="Copy log details"
+            className="p-1 cursor-pointer rounded-md text-primary/60 hover:text-primary hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+          >
+            <Copy className="w-4 h-4" />
+          </button>
+        </div>
+        <p className="text-sm font-mono text-wrap break-all  text-gray-700 dark:text-gray-300">
+          {logDetails}{" "}
         </p>
       </div>
-      
+
       <p className="text-xs text-muted-foreground pt-2">
         You can view this log and more order information on the Orders page.
       </p>
@@ -160,9 +211,13 @@ export function PurchaseConfirmModal({ open, setOpen, product }: PurchaseConfirm
   const renderConfirmationView = () => (
     <div className="space-y-4">
       <p className="text-base text-gray-700 dark:text-gray-300">
-        Are you sure you want to purchase 
-        <strong className="text-primary mx-1">{product.name}</strong> 
-        for <strong className="text-green-600 dark:text-green-400">₦{product.price}</strong>?
+        Are you sure you want to purchase
+        <strong className="text-primary mx-1">{product.name}</strong>
+        for{" "}
+        <strong className="text-green-600 dark:text-green-400">
+          ₦{product.price}
+        </strong>
+        ?
       </p>
       <p className="text-sm text-orange-500">
         This action will debit your wallet and assign an available log.
@@ -172,7 +227,7 @@ export function PurchaseConfirmModal({ open, setOpen, product }: PurchaseConfirm
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
             {order ? "Purchase Confirmed" : "Confirm Purchase"}
@@ -197,7 +252,8 @@ export function PurchaseConfirmModal({ open, setOpen, product }: PurchaseConfirm
             <Button onClick={handleConfirm} disabled={loading}>
               {loading ? (
                 <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Processing...
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />{" "}
+                  Processing...
                 </>
               ) : (
                 "Confirm Purchase"

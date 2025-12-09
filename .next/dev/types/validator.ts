@@ -164,6 +164,15 @@ type RouteHandlerConfig<Route extends AppRouteHandlerRoutes = AppRouteHandlerRou
   type __Unused = __Check
 }
 
+// Validate ../../../app/api/convert-prices/route.ts
+{
+  type __IsExpected<Specific extends RouteHandlerConfig<"/api/convert-prices">> = Specific
+  const handler = {} as typeof import("../../../app/api/convert-prices/route.js")
+  type __Check = __IsExpected<typeof handler>
+  // @ts-ignore
+  type __Unused = __Check
+}
+
 // Validate ../../../app/api/generate-refferal-code/route.ts
 {
   type __IsExpected<Specific extends RouteHandlerConfig<"/api/generate-refferal-code">> = Specific
@@ -240,6 +249,24 @@ type RouteHandlerConfig<Route extends AppRouteHandlerRoutes = AppRouteHandlerRou
 {
   type __IsExpected<Specific extends RouteHandlerConfig<"/api/register">> = Specific
   const handler = {} as typeof import("../../../app/api/register/route.js")
+  type __Check = __IsExpected<typeof handler>
+  // @ts-ignore
+  type __Unused = __Check
+}
+
+// Validate ../../../app/api/shop-products/buy/route.ts
+{
+  type __IsExpected<Specific extends RouteHandlerConfig<"/api/shop-products/buy">> = Specific
+  const handler = {} as typeof import("../../../app/api/shop-products/buy/route.js")
+  type __Check = __IsExpected<typeof handler>
+  // @ts-ignore
+  type __Unused = __Check
+}
+
+// Validate ../../../app/api/shop-products/route.ts
+{
+  type __IsExpected<Specific extends RouteHandlerConfig<"/api/shop-products">> = Specific
+  const handler = {} as typeof import("../../../app/api/shop-products/route.js")
   type __Check = __IsExpected<typeof handler>
   // @ts-ignore
   type __Unused = __Check

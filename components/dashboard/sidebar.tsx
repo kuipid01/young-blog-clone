@@ -27,13 +27,18 @@ const navItems = [
   // { icon: MessageSquare, label: "Verify SMS", href: "/dashboard/verify-sms" },
   {
     icon: Users,
-    label: "Join Group 1",
+    label: "Join Whatsapp Group 1",
+    href: "https://chat.whatsapp.com/LXX7YogyrCY00kvHPylUTA",
+  },
+  {
+    icon: Users,
+    label: "Join Whatsapp Group 2",
     href: "https://chat.whatsapp.com/IAY8S3MwOldJkreKDT8j1M?mode=hqrt2",
   },
   {
     icon: Users,
-    label: "Join Group 2",
-    href: "https://chat.whatsapp.com/LXX7YogyrCY00kvHPylUTA",
+    label: "Join Telegram Group ",
+    href: "http://t.me/Jemilmarketplace",
   },
 ];
 

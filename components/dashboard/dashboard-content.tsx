@@ -6,6 +6,9 @@ import { ProductCard } from "./product-card";
 // Assuming ProductType is imported correctly
 import { ProductType } from "../../lib/schema";
 import { toast } from "sonner";
+import { useFetchProductsAndCategories } from "../../app/shopclone/products";
+import { set } from "react-hook-form";
+import ProductsAndCatgories, { Category } from "../products-and-categories";
 
 // --- START: New Skeleton Component ---
 const ProductCardSkeleton = () => (
@@ -48,19 +51,29 @@ const categories = [
 const SKELETON_COUNT = 5;
 
 export function DashboardContent() {
+  // console.log(productsAndCategories, "api response");
   // We use `null` initially to distinguish between 'not loaded' and 'empty array'
   const [products, setProducts] = useState<ProductType[] | null>(null);
+  const [productsAndCategories, setProductsAndCategories] = useState<
+    Category[] | null
+  >(null);
+  const [allCategories, setAllCategories] = useState<Category[] | null>(null);
+  const [distinctCategories, setDistinctCategories] = useState<
+    { name: string }[] | null
+  >(null);
   const [selectedCategory, setSelectedCategory] = useState("All Categories");
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false); // Kept for explicit control
 
   // 1. Optimization: Memoize data fetching function using useCallback
   const getProducts = useCallback(async () => {
- 
+    setIsLoading(true);
     try {
       const res = await fetch("/api/products", { method: "GET" });
+      const res2 = await fetch("/api/shop-products", { method: "GET" });
       const data = await res.json();
-
+      const data2 = await res2.json();
+      console.log(data2);
       // console.log("data from caller", data);
 
       if (!res.ok) {
@@ -68,7 +81,19 @@ export function DashboardContent() {
         setProducts([]); // Set to empty array on error
         return;
       }
-
+      const categories = data2.categories.map((cat: { name: string }) => ({
+        name: cat.name,
+      }));
+      categories.unshift({ name: "All Categories" });
+      setDistinctCategories(categories);
+      setProductsAndCategories(data2.categories);
+      setAllCategories(data2.categories);
+      localStorage.setItem(
+        "shopProducts",
+        JSON.stringify(
+          data2.categories.flatMap((cat: { products: any }) => cat.products)
+        )
+      );
       setProducts(data.data);
     } catch (error) {
       toast.error("An unexpected error occurred while loading products.");
@@ -82,32 +107,37 @@ export function DashboardContent() {
     getProducts();
   }, [getProducts]); // Dependency array includes the memoized function
 
-  // 2. Improvement: Implement product filtering logic
-  const filteredProducts = useMemo(() => {
-    if (!products) return [];
-
+  useEffect(() => {
+    // 1. Handle the "All Categories" case directly
     if (selectedCategory === "All Categories") {
-      return products;
+      // Reset the displayed data to the full list
+      setProductsAndCategories(allCategories);
+      return;
     }
 
-    // Assuming product objects have a 'category' field matching the categories list
-    return products.filter((product) => product.category === selectedCategory);
-  }, [products, selectedCategory]);
+    // 2. Filter the original data based on the selection
+    const filteredCategories = allCategories?.filter(
+      (category) => category.name === selectedCategory
+    );
+
+    // 3. Update the state with the filtered list
+    setProductsAndCategories(filteredCategories || []);
+  }, [selectedCategory, allCategories, setProductsAndCategories]);
+
+  console.log("products and categories", productsAndCategories);
 
   const currentCategoryDisplay = selectedCategory.toUpperCase();
 
   return (
     <div className="space-y-6">
       {/* Banner */}
-      <div className="relative rounded-2xl overflow-hidden bg-gradient-to-r from-gray-200 to-gray-300 h-48 lg:h-56">
+      <div className="relative rounded-2xl overflow-hidden bg-linear-to-r from-gray-200 to-gray-300 h-48 lg:h-56">
         <img
           src="/megaphone-announcement-marketing-blue-cyan.jpg"
           alt="Banner"
           className="w-full h-full object-cover"
         />
-      
       </div>
-  
 
       {/* Shop by Categories Dropdown */}
       <div className="relative">
@@ -125,20 +155,20 @@ export function DashboardContent() {
 
         {dropdownOpen && (
           <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-full max-w-2xl bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden z-10">
-            {categories.map((category) => (
+            {distinctCategories?.map((category) => (
               <button
-                key={category}
+                key={category.name}
                 onClick={() => {
-                  setSelectedCategory(category);
+                  setSelectedCategory(category.name);
                   setDropdownOpen(false);
                 }}
                 className={`w-full px-6 py-3 text-left hover:bg-gray-50 transition-colors ${
-                  selectedCategory === category
+                  selectedCategory === category.name
                     ? "bg-violet-50 text-violet-600 font-semibold"
                     : "text-gray-700"
                 }`}
               >
-                {category}
+                {category.name}
               </button>
             ))}
           </div>
@@ -151,7 +181,6 @@ export function DashboardContent() {
           {selectedCategory === "All Categories"
             ? "All Products"
             : currentCategoryDisplay}
-          <span className="text-2xl">👌</span>
         </h2>
 
         {/* Category Header (Using the selected category for display) */}
@@ -159,48 +188,10 @@ export function DashboardContent() {
           {currentCategoryDisplay}
         </div>
 
-        {/* Products List (with Skeleton Loader) */}
-        <div className="bg-white rounded-b-xl shadow-sm divide-y divide-gray-100 min-h-[300px]">
-          {/* SKELETON LOADER IMPLEMENTATION */}
-          {isLoading && products === null ? (
-            // Show skeleton loaders when loading for the first time
-            Array.from({ length: SKELETON_COUNT }).map((_, index) => (
-              <ProductCardSkeleton key={index} />
-            ))
-          ) : filteredProducts.length > 0 ? (
-            // Show filtered products
-            filteredProducts.map((product) => {
-              // 3. Optimization: Clean up data manipulation inside map
-              const formattedProduct = {
-                ...product,
-                price: Number(product.price),
-                stock: Number(product.stock),
-                inStock: Number(product.stock) > 5,
-              };
-              return (
-                <ProductCard key={product.id} product={formattedProduct} />
-              );
-            })
-          ) : (
-            // Show empty state
-            <div className="text-center py-10 text-gray-500">
-              No products found for {selectedCategory}.
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Chat Widget */}
-      <div className="fixed bottom-6 right-6 z-50">
-        <button className="w-14 h-14 bg-gradient-to-r from-pink-500 to-rose-500 rounded-full shadow-lg flex items-center justify-center hover:scale-105 transition-transform">
-          <svg
-            className="w-7 h-7 text-white"
-            viewBox="0 0 24 24"
-            fill="currentColor"
-          >
-            <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H6l-2 2V4h16v12z" />
-          </svg>
-        </button>
+        <ProductsAndCatgories
+          categories={productsAndCategories}
+          loading={isLoading}
+        />
       </div>
     </div>
   );

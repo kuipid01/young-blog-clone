@@ -1,0 +1,1 @@
+export const SHOP_CLONE_URL = "https://shopviaclone22.com/api/"

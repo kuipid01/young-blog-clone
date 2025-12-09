@@ -1,106 +1,105 @@
-// POST /api/orders (Create Order with Poor Man's Rollback and Log Assignment)
+// POST /api/orders (Improved: Internal & External Handling with Poor Man's Rollback)
 
-// Assumed Imports
 import { NextResponse } from "next/server";
-import { eq, sql } from "drizzle-orm";
+import { eq, sql, and } from "drizzle-orm";
 import { db } from "../../../lib/db";
 import { logs, order, product, wallets } from "../../../lib/schema";
 
 // Mock function for sending mail
 async function sendMailToAdmin(order: any) {
   console.log(`[MAIL] Sent notification for order ${order.id}`);
-  // return Promise.resolve();
 }
 
 export async function POST(req: Request) {
   let orderId: string | null = null;
   let initialBalance: number = 0;
-  let logToUseId: string | null = null; // Variable to store the ID of the selected log
-  let outerWalletData:
-    | undefined
-    | {
-        userId: string;
-        createdAt: Date;
-        firstName: string | null;
-        lastName: string | null;
-        phoneNumber: string | null;
-        address: string | null;
-        city: string | null;
-        state: string | null;
-        country: string | null;
-        zipCode: string | null;
-        accountName: string | null;
-        accountNumber: string | null;
-        walletBalance: string;
-        updatedAt: Date;
-      };
-  const { userId, productId, quantity = 1 } = await req.json();
+  let logToUseId: string | null = null;
+  let outerWalletData: any = null;
+
+  const {
+    userId,
+    productId,
+    quantity = 1,
+    status,
+    trans_id,
+    data,
+    price,
+    stock,
+    source = "external", // 'internal' or 'external'
+  } = await req.json();
+
+  console.log(`[ORDER] Starting order processing for User: ${userId}, Product: ${productId}, Quantity: ${quantity}, Source: ${source}`);
+
   try {
     if (!userId || !productId || quantity <= 0) {
+      console.log(`[VALIDATION ERROR] Missing or invalid parameters - userId: ${userId}, productId: ${productId}, quantity: ${quantity}`);
       return NextResponse.json(
         { message: "Missing userId, productId, or invalid quantity." },
         { status: 400 }
       );
     }
 
-    // --- STEP 1: Fetch Required Data (Product, Wallet, and UNUSED Log) ---
-    // IMPORTANT: Fetch only ONE unused log available for the product
-    const [productData, walletData, unusedLogData] = await Promise.all([
-      db.query.product.findFirst({ where: eq(product.id, productId) }),
-      db.query.wallets.findFirst({ where: eq(wallets.userId, userId) }),
-      // Fetch only ONE unused log, ordered by creation time (FIFO)
-      db.query.logs.findFirst({
-        where: (logs, { eq, and }) =>
-          and(eq(logs.productId, productId), eq(logs.status, "unused")),
-        orderBy: (logs, { asc }) => [asc(logs.createdAt)],
-      }),
-    ]);
+    // --- STEP 1: Fetch wallet & logs (if internal) ---
+    console.log(`[STEP 1] Fetching wallet data for User: ${userId}`);
+    const walletData = await db.query.wallets.findFirst({
+      where: eq(wallets.userId, userId),
+    });
 
-    if (!productData) {
-      return NextResponse.json(
-        { message: "Product not found." },
-        { status: 404 }
-      );
-    }
     if (!walletData) {
+      console.log(`[STEP 1 ERROR] Wallet not found for User: ${userId}`);
       return NextResponse.json(
         { message: "User wallet not found." },
         { status: 404 }
       );
     }
     outerWalletData = walletData;
-    // 🛑 NEW VALIDATION: Check for available UNUSED log
-    if (!unusedLogData) {
-      return NextResponse.json(
-        { message: "No available unused logs for this product." },
-        { status: 400 }
-      );
-    }
-
-    // Store the Log ID for use and rollback
-    logToUseId = unusedLogData.id;
-
-    const price = parseFloat(productData.price);
-    const stock = parseInt(productData.stock);
     initialBalance = parseFloat(walletData.walletBalance);
     const totalPrice = price * quantity;
 
-    // --- STEP 2: Validation (Same as before) ---
-    if (stock < quantity) {
+    console.log(`[STEP 1 SUCCESS] Wallet found - Balance: ${initialBalance}, Total Price: ${totalPrice}`);
+
+    // --- Validation: Stock and Wallet Balance ---
+    if (source === "internal" && stock < quantity) {
+      console.log(`[VALIDATION ERROR] Insufficient stock - Available: ${stock}, Required: ${quantity}`);
       return NextResponse.json(
         { message: "Insufficient stock." },
         { status: 400 }
       );
     }
     if (initialBalance < totalPrice) {
+      console.log(`[VALIDATION ERROR] Insufficient wallet balance - Balance: ${initialBalance}, Required: ${totalPrice}`);
       return NextResponse.json(
         { message: "Insufficient wallet balance." },
         { status: 400 }
       );
     }
 
-    // --- STEP 3: POOR MAN'S ROLLBACK - Part 1: Tentative Order Creation ---
-    // Include the logToUseId in the order creation
+    console.log(`[VALIDATION SUCCESS] Stock and wallet balance checks passed`);
+
+    // --- STEP 2: If internal, fetch one unused log ---
+    if (source === "internal") {
+      console.log(`[STEP 2] Fetching unused log for Product: ${productId}`);
+      const unusedLogData = await db.query.logs.findFirst({
+        where: (logs, { eq, and }) =>
+          and(eq(logs.productId, productId), eq(logs.status, "unused")),
+        orderBy: (logs, { asc }) => [asc(logs.createdAt)],
+      });
+
+      if (!unusedLogData) {
+        console.log(`[STEP 2 ERROR] No unused logs available for Product: ${productId}`);
+        return NextResponse.json(
+          { message: "No available unused logs for this product." },
+          { status: 400 }
+        );
+      }
+      logToUseId = unusedLogData.id;
+      console.log(`[STEP 2 SUCCESS] Unused log found - Log ID: ${logToUseId}`);
+    } else {
+      console.log(`[STEP 2 SKIPPED] External product, no log needed`);
+    }
+
+    // --- STEP 3: Tentative Order Creation ---
+    console.log(`[STEP 3] Creating tentative order`);
     const [newOrderResult] = await db
       .insert(order)
       .values({
@@ -109,133 +108,142 @@ export async function POST(req: Request) {
         logId: logToUseId,
         quantity,
         totalPrice: totalPrice.toFixed(2),
-        status: "pending_debit",
+        status,
+        data,
+        trans_id,
       })
       .returning({ insertedId: order.id });
 
     orderId = newOrderResult.insertedId;
+    console.log(`[STEP 3 SUCCESS] Order created - Order ID: ${orderId}`);
 
-    // --- STEP 4: Debit Wallet, Update Stock, and UPDATE LOG STATUS ---
+    // --- STEP 4: Debit Wallet ---
+    console.log(`[STEP 4] Debiting wallet - Previous Balance: ${initialBalance}, Amount: ${totalPrice}`);
     const newBalance = initialBalance - totalPrice;
-
-    // A. Debit Wallet
     await db
       .update(wallets)
       .set({ walletBalance: newBalance.toFixed(2), updatedAt: sql`now()` })
       .where(eq(wallets.userId, userId));
 
-    // B. Update Log Status to 'used'
-    await db
-      .update(logs)
-      .set({ status: "used" })
-      .where(eq(logs.id, logToUseId));
+    console.log(`[STEP 4 SUCCESS] Wallet debited - New Balance: ${newBalance}`);
 
-    // C. Update Stock (if enabled)
-    const newStockValue = Number(stock) - quantity;
-    await db
-      .update(product)
-      .set({ stock: newStockValue.toLocaleString() })
-      .where(eq(product.id, productId));
+    // --- STEP 5: Finalization ---
+    console.log(`[STEP 5] Finalizing order`);
+    let finalOrder: any;
 
-    // --- STEP 5: FINALIZATION: Complete the Order ---
-    const [updatedOrder] = await db
-      .update(order)
-      .set({ status: "completed", updatedAt: sql`now()` })
-      .where(eq(order.id, orderId))
-      .returning({ id: order.id });
+    if (source === "internal" && !trans_id && logToUseId) {
+      console.log(`[STEP 5] Internal product processing - Marking log as used and reducing stock`);
+      // Mark log as used
+      await db
+        .update(logs)
+        .set({ status: "used" })
+        .where(eq(logs.id, logToUseId));
+      console.log(`[STEP 5] Log marked as used - Log ID: ${logToUseId}`);
 
-    console.log("GOT HERE before finalorderlog");
-    // --- STEP 5.5: Fetch the Final Order with Joined Log Data ---
-    // --- STEP 5.5: Fetch the Final Order with Joined Log Data ---
-    const [finalOrderWithLog] = await db
-      .select({
-        order: order,
-        log: {
-          id: logs.id,
-          logDetails: logs.logDetails,
-          status: logs.status,
-        },
-      })
-      .from(order)
-      .leftJoin(logs, eq(order.logId, logs.id)) // Perform the Left Join on order.logId = logs.id
-      .where(eq(order.id, updatedOrder.id));
-    console.log("GOT HERE after finalorderlog");
-    if (!finalOrderWithLog) {
-      throw new Error("Failed to retrieve final order after update.");
+      // Reduce stock
+      const stockNumber = stock - quantity;
+      await db
+        .update(product)
+        .set({ stock: stockNumber.toString() })
+        .where(eq(product.id, productId));
+      console.log(`[STEP 5] Stock reduced - Previous: ${stock}, New: ${stockNumber}`);
+
+      // Fetch final order with joined log
+      [finalOrder] = await db
+        .select({
+          order: order,
+          log: {
+            id: logs.id,
+            logDetails: logs.logDetails,
+            status: logs.status,
+          },
+        })
+        .from(order)
+        .leftJoin(logs, eq(order.logId, logs.id))
+        .where(eq(order.id, orderId));
+      console.log(`[STEP 5] Final order fetched with log details`);
+    } else {
+      console.log(`[STEP 5] External product processing - No log update needed`);
+      // External product: No log update
+      [finalOrder] = await db.select().from(order).where(eq(order.id, orderId));
+      console.log(`[STEP 5] Final order fetched`);
     }
 
-    // --- STEP 6: Side Effect ---
-    await sendMailToAdmin(finalOrderWithLog);
+    // Update order status to completed
+    await db
+      .update(order)
+      .set({ status: "completed", updatedAt: sql`now()` })
+      .where(eq(order.id, orderId));
+    console.log(`[STEP 5 SUCCESS] Order status updated to completed - Order ID: ${orderId}`);
 
-    // ... use finalOrderWithLog in the response:
+    // --- STEP 6: Side Effects ---
+    console.log(`[STEP 6] Sending notification email to admin`);
+    await sendMailToAdmin(finalOrder);
+    console.log(`[STEP 6 SUCCESS] Admin notification sent`);
 
+    console.log(`[ORDER SUCCESS] Order processed successfully - Order ID: ${orderId}`);
     return NextResponse.json(
       {
-        message: "Order created, wallet debited, and log used successfully.",
-        order: finalOrderWithLog,
+        message: "Order processed successfully.",
+        order: finalOrder,
       },
       { status: 201 }
     );
   } catch (error: any) {
-    console.error("Order processing failed:", error.message);
+    console.error(`[ORDER ERROR] Order processing failed: ${error.message}`);
+    console.error(`[ORDER ERROR] Stack trace:`, error.stack);
 
     // --- ROLLBACK LOGIC ---
     if (orderId) {
-      console.log(`Attempting rollback for Order ID: ${orderId}`);
-
+      console.log(`[ROLLBACK] Starting rollback for Order ID: ${orderId}`);
       try {
         // 1. Mark Order as 'failed'
+        console.log(`[ROLLBACK STEP 1] Marking order as failed`);
         await db
           .update(order)
           .set({ status: "failed", updatedAt: sql`now()` })
           .where(eq(order.id, orderId));
+        console.log(`[ROLLBACK STEP 1 SUCCESS] Order marked as failed - Order ID: ${orderId}`);
 
-        console.log(`Order ${orderId} marked as FAILED.`);
+        // 2. Refund wallet
+        console.log(`[ROLLBACK STEP 2] Refunding wallet - Restoring balance to: ${initialBalance}`);
+        const refundedBalance = initialBalance;
+        await db
+          .update(wallets)
+          .set({
+            walletBalance: refundedBalance.toFixed(2),
+            updatedAt: sql`now()`,
+          })
+          .where(eq(wallets.userId, userId));
+        console.log(`[ROLLBACK STEP 2 SUCCESS] Wallet refunded to ${refundedBalance} for User: ${userId}`);
 
-        // 2. Rollback Wallet Debit (Assuming Step 4 failed AFTER the debit)
-        // Since we don't know exactly where the error occurred in Step 4,
-        // the safest "Poor Man's" approach is to try to refund the wallet.
-        // In a real system, you'd check if the wallet debit transaction completed.
-
-        const refundAmount =
-          initialBalance - parseFloat(outerWalletData?.walletBalance || "0");
-        if (refundAmount > 0) {
-          // If the balance was actually reduced (i.e., debit was successful)
-          const refundedBalance = initialBalance; // Restore to the initial balance
-
-          await db
-            .update(wallets)
-            .set({
-              walletBalance: refundedBalance.toFixed(2),
-              updatedAt: sql`now()`,
-            })
-            .where(eq(wallets.userId, userId));
-
-          console.log(`Wallet refunded $${refundAmount.toFixed(2)}.`);
-        }
-
-        // 3. Rollback Log Status (If the log was marked as 'used' before failure)
+        // 3. Reset log if internal
         if (logToUseId) {
+          console.log(`[ROLLBACK STEP 3] Resetting log to unused - Log ID: ${logToUseId}`);
           await db
             .update(logs)
             .set({ status: "unused" })
             .where(eq(logs.id, logToUseId));
-
-          console.log(`Log ${logToUseId} reset to UNUSED.`);
+          console.log(`[ROLLBACK STEP 3 SUCCESS] Log reset to UNUSED - Log ID: ${logToUseId}`);
+        } else {
+          console.log(`[ROLLBACK STEP 3 SKIPPED] No log to reset`);
         }
+
+        console.log(`[ROLLBACK SUCCESS] Rollback completed successfully for Order ID: ${orderId}`);
       } catch (rollbackError) {
         console.error(
-          `CRITICAL: Failed to complete full rollback for order ${orderId}. Manual intervention required.`,
+          `[ROLLBACK CRITICAL ERROR] Failed rollback for Order ID: ${orderId}. Manual intervention needed.`,
           rollbackError
         );
-        // Alert monitoring systems here
       }
+    } else {
+      console.log(`[ROLLBACK SKIPPED] No order ID available, rollback not needed`);
     }
 
     return NextResponse.json(
       {
         message:
-          "Order creation failed due to a server error. Check your wallet balance and log status for recovery.",
+          "Order creation failed. Please verify wallet balance and log status.",
       },
       { status: 500 }
     );

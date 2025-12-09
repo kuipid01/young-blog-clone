@@ -9,13 +9,17 @@ import {
   Filter,
   ChevronDown,
   X,
+  Package,
+  Copy,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useGetLoggedInUserId } from "../app/utils/getloggedinuser";
+import { Separator } from "./ui/separator";
 
 // Define a type for an Order to improve type safety (optional but good practice)
 interface Order {
   id: string;
+  productId?: string;
   product: {
     name: string;
     price: string;
@@ -26,9 +30,10 @@ interface Order {
   log: {
     id: string;
     logDetails: string;
-    status: "used"|"unused";
+    status: "used" | "unused";
   };
   format: string;
+  data: string[];
   quantity: number;
   totalPrice: number;
   status: "completed" | "pending" | "failed";
@@ -82,6 +87,8 @@ Date: ${order.createdAt}
 // --- Component ---
 
 export function OrdersContent() {
+  const shopProducts =
+    JSON.parse(localStorage.getItem("shopProducts") ?? "") || [];
   const { userId } = useGetLoggedInUserId();
   const [orders, setOrders] = useState<Order[] | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -124,7 +131,11 @@ export function OrdersContent() {
         return null;
     }
   };
-
+  const getProductFromLS = (productId: string) => {
+    return shopProducts.find(
+      (product: { id: string }) => product.id === productId
+    );
+  };
   useEffect(() => {
     // wait until userId is set
     if (!userId) {
@@ -184,7 +195,23 @@ export function OrdersContent() {
   const closeViewDetails = () => {
     setSelectedOrder(null);
   };
-
+  // --- Rendering Logic ---
+  const handleCopy = () => {
+    navigator.clipboard
+      .writeText(
+        selectedOrder?.data.join("") || selectedOrder?.log?.logDetails || ""
+      )
+      .then(() => {
+        toast.success("Log copied to clipboard!");
+      })
+      .catch((err) => {
+        console.error("Could not copy text: ", err);
+        toast.error("Failed to copy log.");
+      });
+  };
+  const logDetails =
+    selectedOrder?.log?.logDetails || selectedOrder?.data.join("") || "";
+  // console.log("ORDERS",filteredOrders);
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -295,7 +322,8 @@ export function OrdersContent() {
                       <div className="flex items-start gap-3 max-w-md">
                         <div>
                           <p className="text-sm font-medium text-gray-900 line-clamp-2">
-                            {order?.product?.name}
+                            {order?.product?.name ??
+                              getProductFromLS(order?.productId!)?.name}
                           </p>
                           <p className="text-xs text-gray-500 mt-0.5">
                             {order?.format}
@@ -369,7 +397,7 @@ export function OrdersContent() {
       {/* Order Details Modal (View Details Feature) */}
       {selectedOrder && (
         <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50 flex justify-center items-center p-4">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-h-[80vh] overflow-y-auto max-w-lg">
             <div className="flex justify-between items-center p-6 border-b border-gray-200">
               <h3 className="text-xl font-bold text-gray-900">
                 Order Details: {selectedOrder?.id}
@@ -386,7 +414,8 @@ export function OrdersContent() {
                 <div>
                   <p className="text-sm font-medium text-gray-500">Product</p>
                   <p className="text-base font-semibold text-gray-900">
-                    {selectedOrder?.product?.name}
+                    {selectedOrder?.product?.name ??
+                      getProductFromLS(selectedOrder?.productId!)?.name}
                   </p>
                 </div>
                 <div>
@@ -440,14 +469,25 @@ export function OrdersContent() {
                   </p>
                 </div>
               </div>
+              <Separator />
+              <div className="text-left  bg-gray-50 dark:bg-gray-800 p-4 rounded-md space-y-2">
+                <div className="flex justify-between items-center">
+                  <h1 className="text-lg font-semibold flex items-center gap-2 text-primary/80">
+                    <Package className="w-4 h-4" /> Log Details:
+                  </h1>
 
-              <div className="bg-gray-100 rounded-md px-2 text-bold py-2">
-                <p className="text-sm font-medium text-gray-500">
-                  Delivery Format
+                  {/* 📋 The Copy Button */}
+                  <button
+                    onClick={handleCopy}
+                    aria-label="Copy log details"
+                    className="p-1 cursor-pointer rounded-md text-primary/60 hover:text-primary hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+                  >
+                    <Copy className="w-4 h-4" />
+                  </button>
+                </div>
+                <p className="text-sm font-mono text-wrap break-all  text-gray-700 dark:text-gray-300">
+                  {logDetails}{" "}
                 </p>
-                <code className="text-sm text-gray-700 bg-gray-100 p-2 rounded-md inline-block mt-1">
-                 {selectedOrder?.log?.logDetails} 
-                </code>
               </div>
             </div>
             <div className="p-6 border-t border-gray-200 flex justify-end gap-3">

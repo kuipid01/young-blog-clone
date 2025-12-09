@@ -52,7 +52,7 @@ export const useGetLoggedInUser = () => {
       }
 
       const data: UserType = await response.json();
-     console.log(data,"dataf fomr call");
+    //  console.log(data,"dataf fomr call");
       cache.current.user = data;
       setUser(data);
     } catch (err) {

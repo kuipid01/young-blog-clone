@@ -6,7 +6,7 @@ import { eq } from "drizzle-orm";
 // GET /api/orders/[userId]
 export async function GET(
   req: Request,
-  ctx: RouteContext<"/api/wallet/[userId]">
+  ctx: RouteContext<"/api/orders/[userId]">
 ) {
   const { userId } = await ctx.params;
 
@@ -27,6 +27,7 @@ export async function GET(
           quantity: order.quantity,
           totalPrice: order.totalPrice,
           status: order.status,
+          data: order.data,
           createdAt: order.createdAt,
           updatedAt: order.updatedAt,
         },
@@ -45,8 +46,8 @@ export async function GET(
         },
       })
       .from(order)
-      .innerJoin(product, eq(order.productId, product.id))
-      .innerJoin(logs, eq(order.logId, logs.id))
+      .leftJoin(product, eq(order.productId, product.id))
+      .leftJoin(logs, eq(order.logId, logs.id))
       .where(eq(order.userId, userId));
 
     const formattedData = rows.map((row) => ({
@@ -58,7 +59,6 @@ export async function GET(
         ...row.logs
       }
     }));
-    
     // Return directly — already nested
     return NextResponse.json(formattedData, { status: 200 });
   } catch (error) {

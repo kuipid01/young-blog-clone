@@ -10,6 +10,7 @@ import {
   integer,
   boolean,
   pgEnum,
+  json,
 } from "drizzle-orm/pg-core";
 
 import { createId } from "@paralleldrive/cuid2";
@@ -203,24 +204,16 @@ export const order = pgTable("orders", {
     .notNull()
     .references(() => user.id),
 
-  productId: varchar("product_id", { length: 30 })
-    .notNull()
-    .references(() => product.id),
+  productId: varchar("product_id", { length: 30 }), // optional
 
-  logId: varchar("log_id", { length: 30 })
-    .notNull()
-    .references(() => logs.id),
+  logId: varchar("log_id", { length: 30 }).references(() => logs.id),
+  trans_id: varchar("trans_id", { length: 50 }),
+
+  data: json("data").notNull(), // <-- stores your array natively
 
   quantity: integer("quantity").notNull().default(1),
-
   totalPrice: numeric("total_price", { precision: 12, scale: 2 }).notNull(),
-
-  status: varchar("status", {
-    length: 50,
-    enum: ["pending_debit", "completed", "failed", "refunded"],
-  })
-    .notNull()
-    .default("pending_debit"),
+  status: varchar("status").notNull().default("pending_debit"),
 
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
