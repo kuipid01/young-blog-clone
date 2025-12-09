@@ -87,8 +87,9 @@ Date: ${order.createdAt}
 // --- Component ---
 
 export function OrdersContent() {
-  const shopProducts =
-    JSON.parse(localStorage.getItem("shopProducts") ?? "") || [];
+  const [shopProducts, setShopProducts] = useState<any[]>([]);
+  const [isClient, setIsClient] = useState(false);
+
   const { userId } = useGetLoggedInUserId();
   const [orders, setOrders] = useState<Order[] | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -106,7 +107,23 @@ export function OrdersContent() {
       statusFilter === "all" || order.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
-  console.log(selectedOrder, "selected order");
+  useEffect(() => {
+    // 1. Set a flag to confirm we are on the client
+    setIsClient(true);
+
+    // 2. Access localStorage only inside useEffect
+    try {
+      const storedProducts = localStorage.getItem("shopProducts");
+
+      // Handle case where item might be null or empty string
+      const parsedProducts = storedProducts ? JSON.parse(storedProducts) : [];
+
+      setShopProducts(parsedProducts);
+    } catch (e) {
+      console.error("Failed to parse shopProducts from localStorage", e);
+      setShopProducts([]); // Default to an empty array on error
+    }
+  }, []);
   const getStatusBadge = (status: Order["status"]) => {
     switch (status) {
       case "completed":
