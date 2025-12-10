@@ -39,7 +39,7 @@ export async function POST(request: Request) {
         username,
         email,
         password: hashedPassword,
-        referralCode: generatedCode,
+        referralCode: generatedCode.trim(),
       })
       .returning({ id: user.id });
 
