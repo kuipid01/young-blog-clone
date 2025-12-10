@@ -37,7 +37,7 @@ export async function POST(request: Request) {
       .insert(user)
       .values({
         username,
-        email,
+        email:email.toLowerCase(),
         password: hashedPassword,
         referralCode: generatedCode.trim().toLowerCase(),
       })
