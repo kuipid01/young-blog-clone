@@ -35,6 +35,7 @@ export const user = pgTable("users", {
     .$defaultFn(() => createId()),
 
   username: text("username"),
+  bvn: text("bvn"),
   email: text("email"),
   password: text("password"),
   referralCode: varchar("referralCode", { length: 50 }).unique().notNull(),
@@ -150,6 +151,8 @@ export const wallets = pgTable("wallets", {
 
   // --- Account/Bank Details (Optional for transfers, etc.) ---
   accountName: varchar("account_name", { length: 255 }),
+  bankName: varchar("bank_name", { length: 255 }),
+  flwRef: varchar("flw_ref", { length: 255 }),
   accountNumber: varchar("account_number", { length: 50 }),
 
   // --- Wallet Balance ---

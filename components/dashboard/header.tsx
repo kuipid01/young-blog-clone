@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Menu } from "lucide-react";
 import { useUserWallet } from "../../app/utils/get-wallet";
 import AvatarMenu from "../logout-menu";
+import useWalletStore from "../../app/stores/wallet-stores";
 
 interface HeaderProps {
   onMenuClick: () => void;
@@ -11,6 +12,7 @@ interface HeaderProps {
 
 export function Header({ onMenuClick }: HeaderProps) {
   const { wallet, loading, refetchWallet } = useUserWallet();
+  const {walletBalance} = useWalletStore()
   return (
     <header className="bg-white border-b border-gray-100 px-4 py-3">
       <div className="flex items-center justify-between">
@@ -45,7 +47,7 @@ export function Header({ onMenuClick }: HeaderProps) {
           {/* Wallet Balance */}
           <div className="bg-violet-600 text-white px-4 py-2 rounded-lg text-sm font-medium">
             {" "}
-            ₦{wallet?.walletBalance ?? "0.00"}
+            ₦{walletBalance ?? "0.00"}
           </div>
 
           {/* User Avatar */}

@@ -10,12 +10,16 @@ import { WalletCardSkeleton } from "./wallet-card-loader";
 import { useUserOrders } from "../app/hooks/user-orders";
 import { usePayments } from "../app/hooks/user-payments";
 import clsx from "clsx";
+import useWalletStore from "../app/stores/wallet-stores";
 
 const paymentHistory: any[] = [
   // Empty for now - matches "Data not found" state
 ];
 
 export function DashboardHome() {
+  const {walletBalance} = useWalletStore()
+
+  console.log("WALLET BALANCE FROM STORE", walletBalance);
   const { payments } = usePayments();
   const [userWallet, setuserWallet] = useState<any>(null);
   const router = useRouter();
@@ -94,7 +98,7 @@ export function DashboardHome() {
           <div className="bg-linear-to-r from-violet-500 to-purple-600 rounded-2xl p-6 text-white">
             <h2 className="text-lg font-medium mb-2">My wallet</h2>
             <p className="text-3xl font-bold mb-6">
-              ₦{userWallet?.walletBalance ?? "0.00"}
+              ₦{walletBalance ?? "0.00"}
             </p>
             <div className="flex gap-3">
               <Link

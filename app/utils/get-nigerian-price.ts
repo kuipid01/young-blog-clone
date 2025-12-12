@@ -268,3 +268,13 @@ export const getNigerianPrice = async (
     throw error;
   }
 };
+
+export const getUSDToNGNRate = async (): Promise<string> => {
+  try {
+    const { rate } = await getCachedCurrencyRate();
+
+    return rate.toString();
+  } catch (error: any) {
+    throw error;
+  }
+};

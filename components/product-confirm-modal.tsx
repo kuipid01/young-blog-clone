@@ -15,6 +15,7 @@ import { jwtDecode } from "jwt-decode";
 import { Product } from "./dashboard/product-card";
 import { Loader2, CheckCircle, Package, Copy } from "lucide-react"; // Added icons
 import { Separator } from "@/components/ui/separator"; // Assuming you have this Shadcn component
+import useWalletStore from "../app/stores/wallet-stores";
 
 // Define a minimal Order structure for better type safety
 interface Order {
@@ -39,12 +40,14 @@ export function PurchaseConfirmModal({
   setOpen,
   product,
 }: PurchaseConfirmModalProps) {
+ 
   if (!product) return null;
+
+   const { setWalletBalance, walletBalance } = useWalletStore();
   // Use the new Order interface
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(false);
   const router = useRouter();
-  console.log(order, "order returned");
   // Reset state when the dialog is opened for a new purchase attempt
   useEffect(() => {
     if (open) {
@@ -54,8 +57,12 @@ export function PurchaseConfirmModal({
 
   const handleConfirm = async () => {
     setLoading(true);
-
+    let previousBalance = walletBalance;
     try {
+      if (!walletBalance) {
+        return;
+      }
+      setWalletBalance(walletBalance - product.price);
       const token = localStorage.getItem("token");
 
       if (!token) {
@@ -143,6 +150,12 @@ export function PurchaseConfirmModal({
         description: `Order ID: ${finalOrder.id}. Log details are now available.`,
       });
     } catch (error) {
+      if (previousBalance) {
+        setWalletBalance(previousBalance);
+      } else {
+        console.log("BUG HERE");
+      }
+
       console.error(error);
       toast.error("An unexpected network error occurred.");
     } finally {
