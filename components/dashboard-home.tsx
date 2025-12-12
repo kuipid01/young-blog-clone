@@ -5,33 +5,42 @@ import ProfileModal from "./wallet-virtual";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { jwtDecode } from "jwt-decode";
-import { wallets } from "../lib/schema";
+// import { user, wallets } from "../lib/schema"; // <-- Not needed in component logic
 import { WalletCardSkeleton } from "./wallet-card-loader";
 import { useUserOrders } from "../app/hooks/user-orders";
 import { usePayments } from "../app/hooks/user-payments";
 import clsx from "clsx";
 import useWalletStore from "../app/stores/wallet-stores";
+import { useGetLoggedInUser } from "../app/hooks/use-get-logged-in-user";
 
-const paymentHistory: any[] = [
-  // Empty for now - matches "Data not found" state
-];
+// Define the assumed structure of the logged-in user with necessary ID and email
+interface LoggedInUser {
+  id: string;
+  email: string;
+  // Add other properties that might be needed, e.g., first_name
+}
 
 export function DashboardHome() {
-  const {walletBalance} = useWalletStore()
-
-  console.log("WALLET BALANCE FROM STORE", walletBalance);
+  // Cast user to ensure type safety for 'id' and 'email'
+  const { user } = useGetLoggedInUser() as { user: LoggedInUser | null };
+  const { walletBalance } = useWalletStore();
   const { payments } = usePayments();
   const [userWallet, setuserWallet] = useState<any>(null);
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
+  const [amount, setAmount] = useState<number>(0); // Ensure amount is number type
+  const [creatingAccount, setCreatingAccount] = useState(false);
   const [fetchingWallet, setfetchingWallet] = useState(false);
   const { orders } = useUserOrders();
 
-  // console.log(payments);
+  // NEW STATE: Control visibility of the amount input field
+  const [showAmountInput, setShowAmountInput] = useState(false);
 
-  const totalDeposit = payments?.filter((payment) => payment.status === "funded")
+  const totalDeposit = payments
+    ?.filter((payment) => payment.status === "funded")
     .reduce((acc, val) => Number(val.amount) + acc, 0);
 
+  // ... (getWallet function remains the same)
   const getWallet = useCallback(async () => {
     setfetchingWallet(true);
     const token = localStorage.getItem("token");
@@ -45,7 +54,6 @@ export function DashboardHome() {
     try {
       const decoded: { id: string; exp?: number } = jwtDecode(token);
 
-      // Check token expiration immediately
       if (decoded.exp && decoded.exp * 1000 < Date.now()) {
         localStorage.removeItem("token");
         toast.error("Session expired. Please log in again.");
@@ -55,7 +63,6 @@ export function DashboardHome() {
 
       userId = decoded.id;
     } catch (authError) {
-      // Handle malformed token or decoding failure
       console.error("Token decoding failed:", authError);
       localStorage.removeItem("token");
       toast.error("Invalid session data. Please log in.");
@@ -66,32 +73,166 @@ export function DashboardHome() {
       const res = await fetch(`/api/wallet/${userId}`, { method: "GET" });
       const data = await res.json();
 
-      // console.log("data from caller", data);
-
       if (!res.ok) {
         toast.error(data.message || "Failed to fetch wallet.");
-        setuserWallet(null); // Set to empty array on error
+        setuserWallet(null);
         return;
       }
 
       setuserWallet(data);
     } catch (error) {
       toast.error("An unexpected error occurred while loading products.");
-      setuserWallet([]); // Set to empty array on error
+      setuserWallet([]);
     } finally {
       setfetchingWallet(false);
     }
   }, [router]);
 
+  // ... (checkWallet function remains the same)
+  const checkWallet = () => {
+    if (
+      !userWallet?.firstName || // Use optional chaining to avoid errors if userWallet is null/undefined
+      !userWallet?.lastName ||
+      !userWallet?.phoneNumber
+    ) {
+      return true;
+    }
+    if (userWallet.accountNumber) {
+      //we will display accout details
+    }
+    return false;
+  };
+
+  // --- Interfaces and initiateTemporaryWalletFunding function (Moved to component body for scope) ---
+
+  interface PaystackInitResponse {
+    status: boolean;
+    message: string;
+    data: {
+      authorization_url?: string;
+      access_code?: string;
+      reference: string;
+      account_number?: string;
+      bank_name?: string;
+      bank_code?: string;
+    };
+  }
+
+  interface FundingRequestData {
+    userId: string;
+    email: string;
+    amount: number; // Amount in kobo/cents
+  }
+
+  const initiateTemporaryWalletFunding = useCallback(
+    async (
+      fundingData: FundingRequestData
+    ): Promise<PaystackInitResponse["data"] | null> => {
+      console.log("Starting temporary wallet funding process...");
+
+      try {
+        setCreatingAccount(true);
+        const fundingUrl = "/api/funding";
+
+        const fundingResponse = await fetch(fundingUrl, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(fundingData),
+        });
+
+        if (!fundingResponse.ok) {
+          const error = await fundingResponse.json();
+          throw new Error(
+            error.message ||
+              `Funding initiation failed: ${JSON.stringify(error)}`
+          );
+        }
+
+        const fundingResult: PaystackInitResponse =
+          await fundingResponse.json();
+
+        if (fundingResult.status !== true) {
+          throw new Error(
+            fundingResult.message ||
+              "Paystack returned an error during initiation."
+          );
+        }
+
+        console.log("Funding Initiated Successfully:", fundingResult.data);
+        toast.success("Funding account created! you will be redirected.");
+        if (fundingResult.data.authorization_url) {
+          window.location.href = fundingResult.data.authorization_url;
+        }
+
+        return fundingResult.data;
+      } catch (error) {
+        const errorMessage =
+          error instanceof Error ? error.message : "Unknown funding error.";
+        toast.error(errorMessage);
+        console.error("Temporary Funding Initiation Failed:", error);
+
+        return null;
+      } finally {
+        setCreatingAccount(false);
+      }
+    },
+    []
+  ); // Added useCallback for stability
+
+  // --- NEW HANDLER FUNCTION ---
+  const handleFundWalletClick = async () => {
+    // 1. Check for required profile data first
+    if (checkWallet()) {
+      setIsOpen(true); // Open modal to complete profile
+      return;
+    }
+
+    // 2. If the input is not visible, show it
+    if (!showAmountInput) {
+      setShowAmountInput(true);
+      return;
+    }
+
+    // 3. If input is visible, attempt to initiate funding
+    if (!user?.id || !user?.email) {
+      toast.error("User session data is missing.");
+      return;
+    }
+    if (amount <= 0) {
+      toast.error("Please enter a valid amount greater than zero.");
+      return;
+    }
+
+    // Paystack expects amount in kobo/cents (1 NGN = 100 kobo)
+    const amountInKobo = amount * 100;
+
+    const fundingData: FundingRequestData = {
+      userId: user.id,
+      email: user.email,
+      amount: amountInKobo,
+    };
+
+    const result = await initiateTemporaryWalletFunding(fundingData);
+
+    // Optionally: After successful call, hide the input and reset amount
+    if (result) {
+      setShowAmountInput(false);
+      setAmount(0);
+      // Implement logic to display the temporary account details here
+    }
+  };
+
   useEffect(() => {
     getWallet();
   }, [getWallet]);
-  // console.log(userWallet);
+
   return (
     <div className="space-y-6">
       {/* Top Cards Row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* My Wallet Card */}
+        {/* My Wallet Card (Remains the same) */}
         {fetchingWallet ? (
           <WalletCardSkeleton />
         ) : (
@@ -117,27 +258,55 @@ export function DashboardHome() {
           </div>
         )}
 
-        {/* Payment Card */}
+        {/* Payment Card - NOW WITH TOGGLE AND INPUT */}
         <div className="bg-white rounded-2xl p-6 border border-gray-200">
           <p className="text-sm text-gray-500 mb-1">Payment</p>
           <h3 className="text-xl font-semibold text-gray-900 mb-4">
-            Top Up With Your Virtual Account
+            Top Up With Temporary Virtual Account
           </h3>
+
+          {/* New: Conditional Input Field */}
+          {showAmountInput && (
+            <div className="mb-4">
+              <label
+                htmlFor="fund-amount"
+                className="text-sm font-medium text-gray-700 block mb-1"
+              >
+                Enter Amount (NGN)
+              </label>
+              <input
+                id="fund-amount"
+                type="number"
+                value={amount === 0 ? "" : amount}
+                onChange={(e) => setAmount(Number(e.target.value))}
+                placeholder="e.g., 5000"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-violet-500 focus:border-violet-500"
+                min="100" // Minimum funding amount
+              />
+            </div>
+          )}
+
+          {/* Button: Toggles input / Submits funding */}
           <button
-            onClick={() => {
-              // setIsOpen(true);
-              toast.info("Hey we are working on this feature👌👌👌");
-            }}
-            className="w-full py-3 bg-linear-to-r from-violet-500 to-purple-600 text-white rounded-lg font-medium hover:from-violet-600 hover:to-purple-700 transition-colors"
+            onClick={handleFundWalletClick}
+            className="w-full py-3 bg-linear-to-r from-violet-500 to-purple-600 text-white rounded-lg font-medium hover:from-violet-600 hover:to-purple-700 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+            disabled={creatingAccount || fetchingWallet}
           >
-            Create Your Account
+            {creatingAccount
+              ? "Initiating Funding..."
+              : checkWallet()
+              ? "Complete Profile to Fund"
+              : showAmountInput
+              ? `Fund ₦${amount.toFixed(2)}`
+              : "Start Temporary Funding"}
           </button>
         </div>
       </div>
 
-      {/* Stats Cards Row */}
+      {/* Stats Cards Row (Remains the same) */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Total Orders Card */}
+        {/* ... (JSX for Total Orders) ... */}
         <div className="bg-white rounded-2xl p-6 border border-gray-200">
           <p className="text-sm text-gray-500 mb-1">Total Orders</p>
           <p className="text-3xl font-bold text-gray-900 mb-4">
@@ -154,6 +323,7 @@ export function DashboardHome() {
         </div>
 
         {/* Total Deposits Card */}
+        {/* ... (JSX for Total Deposits) ... */}
         <div className="bg-white rounded-2xl p-6 border border-gray-200">
           <p className="text-sm text-gray-500 mb-1">Total Deposits</p>
           <p className="text-3xl font-bold text-gray-900 mb-4">
@@ -170,7 +340,8 @@ export function DashboardHome() {
         </div>
       </div>
 
-      {/* Latest Payments History */}
+      {/* Latest Payments History (Remains the same) */}
+      {/* ... (JSX for Latest Payments History) ... */}
       <div className="bg-white rounded-2xl border border-gray-200">
         <div className="p-6 border-b border-gray-100">
           <h3 className="text-lg font-semibold text-gray-900">
@@ -238,6 +409,7 @@ export function DashboardHome() {
           </table>
         </div>
       </div>
+
       <ProfileModal isOpen={isOpen} setIsOpen={setIsOpen} />
     </div>
   );

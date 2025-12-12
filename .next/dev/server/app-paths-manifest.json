@@ -1,14 +1,20 @@
 {
+  "/_not-found/page": "app/_not-found/page.js",
   "/api/convert-prices/route": "app/api/convert-prices/route.js",
+  "/api/funding/route": "app/api/funding/route.js",
   "/api/get-rate/route": "app/api/get-rate/route.js",
   "/api/login/route": "app/api/login/route.js",
   "/api/orders/[userId]/route": "app/api/orders/[userId]/route.js",
   "/api/payments/[userId]/route": "app/api/payments/[userId]/route.js",
+  "/api/paystack/providers/route": "app/api/paystack/providers/route.js",
+  "/api/paystack/webhook/route": "app/api/paystack/webhook/route.js",
   "/api/products/route": "app/api/products/route.js",
   "/api/shop-products/route": "app/api/shop-products/route.js",
   "/api/users/[userId]/route": "app/api/users/[userId]/route.js",
   "/api/wallet/[userId]/route": "app/api/wallet/[userId]/route.js",
+  "/api/wallet/route": "app/api/wallet/route.js",
   "/auth/login/page": "app/auth/login/page.js",
   "/dashboard/page": "app/dashboard/page.js",
-  "/dashboard/products/page": "app/dashboard/products/page.js"
+  "/dashboard/products/page": "app/dashboard/products/page.js",
+  "/dashboard/wallet-history/page": "app/dashboard/wallet-history/page.js"
 }
