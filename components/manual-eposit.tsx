@@ -210,11 +210,11 @@ export function ManualDepositContent() {
           </div>
 
           <div className="py-2 space-y-2">
-            <IconWithText
+            {/* <IconWithText
               icon={<XCircle className="w-5 h-5 text-red-500" />}
               text="DO NOT send to moniepoint bank"
               className="justify-center text-red-600"
-            />
+            /> */}
             <IconWithText
               icon={<CheckCircle className="w-5 h-5 text-green-500" />}
               text="PLEASE UPLOAD A CLEAR RECEIPT THAT SHOWS YOUR NAME!"
