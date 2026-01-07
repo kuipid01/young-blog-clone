@@ -13,7 +13,7 @@ import { Dispatch, SetStateAction, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { jwtDecode } from "jwt-decode";
 import { Product } from "./dashboard/product-card";
-import { Loader2, CheckCircle, Package, Copy } from "lucide-react"; // Added icons
+import { Loader2, CheckCircle, Package, Copy, Minus, Plus } from "lucide-react"; // Added icons
 import { Separator } from "@/components/ui/separator"; // Assuming you have this Shadcn component
 import useWalletStore from "../app/stores/wallet-stores";
 
@@ -40,29 +40,53 @@ export function PurchaseConfirmModal({
   setOpen,
   product,
 }: PurchaseConfirmModalProps) {
- 
+
   if (!product) return null;
 
-   const { setWalletBalance, walletBalance } = useWalletStore();
+  const { setWalletBalance, walletBalance } = useWalletStore();
   // Use the new Order interface
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(false);
+  const [quantity, setQuantity] = useState(1);
   const router = useRouter();
   // Reset state when the dialog is opened for a new purchase attempt
   useEffect(() => {
     if (open) {
       setOrder(null);
+      setQuantity(1);
     }
   }, [open]);
+
+  const increment = () => {
+    console.log("Incrementing quantity...", product);
+    if (quantity < product.amount) {
+      setQuantity((prev) => prev + 1);
+    }
+  };
+
+  const decrement = () => {
+    if (quantity > 1) {
+      setQuantity((prev) => prev - 1);
+    }
+  };
 
   const handleConfirm = async () => {
     setLoading(true);
     let previousBalance = walletBalance;
+    const totalCost = Number(product.price) * quantity;
+
     try {
-      if (!walletBalance) {
+      if (walletBalance === undefined || walletBalance === null) {
         return;
       }
-      setWalletBalance(walletBalance - product.price);
+
+      if (walletBalance < totalCost) {
+        toast.error("Insufficient wallet balance for this quantity.");
+        setLoading(false);
+        return;
+      }
+
+      setWalletBalance(walletBalance - totalCost);
       const token = localStorage.getItem("token");
 
       if (!token) {
@@ -95,7 +119,7 @@ export function PurchaseConfirmModal({
       const formData = new FormData();
       formData.append("action", "buyProduct");
       formData.append("id", product.id);
-      formData.append("amount", "1");
+      formData.append("amount", quantity.toString());
       //call external api then use data returned to create order with log id
       const externalRes = await fetch("/api/shop-products/buy", {
         method: "POST",
@@ -122,12 +146,12 @@ export function PurchaseConfirmModal({
         body: JSON.stringify({
           userId,
           productId: product.id,
-          quantity: 1,
+          quantity: quantity,
           status: externalData.status.toString(),
           trans_id: externalData.trans_id.toString(),
           data: externalData.data,
           price: product.price.toString(),
-          stock: "1",
+          stock: quantity.toString(),
         }),
       });
 
@@ -224,16 +248,50 @@ export function PurchaseConfirmModal({
   const renderConfirmationView = () => (
     <div className="space-y-4">
       <p className="text-base text-gray-700 dark:text-gray-300">
-        Are you sure you want to purchase
-        <strong className="text-primary mx-1">{product.name}</strong>
-        for{" "}
-        <strong className="text-green-600 dark:text-green-400">
-          ₦{product.price}
-        </strong>
-        ?
+        Are you sure you want to purchase{" "}
+        <strong className="text-primary mx-1">{product.name}</strong>?
       </p>
+
+      {/* Quantity Selector */}
+      <div className="flex items-center justify-between bg-gray-50 dark:bg-gray-800 p-3 rounded-lg">
+        <span className="text-sm font-medium">Quantity:</span>
+        <div className="flex items-center space-x-3">
+          <Button
+            variant="outline"
+            size="icon"
+            className="h-8 w-8"
+            onClick={decrement}
+            disabled={quantity <= 1}
+          >
+            <Minus className="h-4 w-4" />
+          </Button>
+          <span className="font-bold w-4 text-center">{quantity}</span>
+          <Button
+            variant="outline"
+            size="icon"
+            className="h-8 w-8"
+            onClick={increment}
+            disabled={quantity >= product.amount}
+          >
+            <Plus className="h-4 w-4" />
+          </Button>
+        </div>
+      </div>
+
+      <div className="flex justify-between items-center border-t pt-2">
+        <span className="text-sm text-gray-500">Unit Price:</span>
+        <span className="font-medium">₦{product.price}</span>
+      </div>
+
+      <div className="flex justify-between items-center">
+        <span className="text-base font-bold">Total Cost:</span>
+        <strong className="text-xl text-green-600 dark:text-green-400">
+          ₦{(Number(product.price) * quantity).toFixed(2)}
+        </strong>
+      </div>
+
       <p className="text-sm text-orange-500">
-        This action will debit your wallet and assign an available log.
+        This action will debit your wallet and assign available logs.
       </p>
     </div>
   );
