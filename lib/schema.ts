@@ -224,28 +224,13 @@ export const order = pgTable("orders", {
   // Refund request fields
   refundReason: text("refund_reason"),
   refundProof: text("refund_proof"),
-  refundBankName: text("refund_bank_name"),
-  refundAccountNumber: text("refund_account_number"),
-  refundAccountName: text("refund_account_name"),
   // Admin response
   refundAdminNote: text("refund_admin_note"),
 });
 
 // SAVED BANK DETAILS TABLE
-export const savedBankDetails = pgTable("saved_bank_details", {
-  id: varchar("id", { length: 30 })
-    .notNull()
-    .primaryKey()
-    .$defaultFn(() => createId()),
-  userId: varchar("user_id", { length: 30 })
-    .notNull()
-    .references(() => user.id),
-  bankName: text("bank_name").notNull(),
-  bankCode: text("bank_code"), // For API usage
-  accountNumber: text("account_number").notNull(),
-  accountName: text("account_name").notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-});
+// SAVED BANK DETAILS TABLE (Removed)
+
 
 export const orderRelations = relations(order, ({ one }) => ({
   user: one(user, {
@@ -283,7 +268,6 @@ export const userRelations = relations(user, ({ many, one }) => ({
     fields: [user.id],
     references: [wallets.userId],
   }),
-  savedBanks: many(savedBankDetails),
 }));
 
 

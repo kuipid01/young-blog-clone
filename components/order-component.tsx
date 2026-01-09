@@ -10,8 +10,6 @@ import {
   ChevronDown,
   X,
   Upload, // Import Upload icon
-  Check,
-  AlertTriangle,
   Package, // Moved Package here
   Copy,    // Moved Copy here
 } from "lucide-react";
@@ -113,16 +111,7 @@ export function OrdersContent() {
   const [refundProofFile, setRefundProofFile] = useState<File | null>(null);
   const [isRefundSubmitting, setIsRefundSubmitting] = useState(false);
 
-  // Bank Details State
-  const [banks, setBanks] = useState<{ name: string; code: string }[]>([]);
-  const [savedBanks, setSavedBanks] = useState<any[]>([]);
-  const [selectedSavedBankId, setSelectedSavedBankId] = useState<string>("new");
-  const [refundBankName, setRefundBankName] = useState("");
-  const [refundBankCode, setRefundBankCode] = useState("");
-  const [refundAccountNumber, setRefundAccountNumber] = useState("");
-  const [refundAccountName, setRefundAccountName] = useState("");
 
-  const [saveBankDetails, setSaveBankDetails] = useState(false);
 
 
 
@@ -265,66 +254,9 @@ export function OrdersContent() {
     setIsRefundModalOpen(true);
     // Close detail view if open
     setSelectedOrder(null);
-
-    // Reset bank details
-    setRefundBankName("");
-    setRefundBankCode("");
-    setRefundAccountNumber("");
-    setRefundAccountName("");
-    setSelectedSavedBankId("new");
-    setSaveBankDetails(false);
-
-    // Fetch banks and saved banks
-    fetchBanks();
-    fetchSavedBanks();
   };
 
-  const fetchBanks = async () => {
-    try {
-      const res = await fetch("/api/paystack/banks");
-      const data = await res.json();
-      if (data.status) {
-        setBanks(data.data);
-      }
-    } catch (error) {
-      console.error("Failed to fetch banks", error);
-    }
-  };
 
-  const fetchSavedBanks = async () => {
-    if (!userId) return;
-    try {
-      const res = await fetch(`/api/user/saved-banks/${userId}`);
-      const data = await res.json();
-      if (Array.isArray(data)) {
-        setSavedBanks(data);
-      }
-    } catch (error) {
-      console.error("Failed to fetch saved banks", error);
-    }
-  };
-
-  // Removed automatic account resolution
-
-
-  const handleSavedBankChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const val = e.target.value;
-    setSelectedSavedBankId(val);
-    if (val === "new") {
-      setRefundBankName("");
-      setRefundBankCode("");
-      setRefundAccountNumber("");
-      setRefundAccountName("");
-    } else {
-      const bank = savedBanks.find((b) => b.id === val);
-      if (bank) {
-        setRefundBankName(bank.bankName);
-        setRefundBankCode(bank.bankCode || ""); // Assumes saved bank has code, likely need to store it
-        setRefundAccountNumber(bank.accountNumber);
-        setRefundAccountName(bank.accountName);
-      }
-    }
-  };
 
 
   const closeRefundModal = () => {
@@ -335,16 +267,6 @@ export function OrdersContent() {
   const handleRefundSubmit = async () => {
     if (!refundOrder || !refundReason) {
       toast.error("Please provide a reason for the refund.");
-      return;
-    }
-
-    if (!refundAccountNumber || !refundAccountName || !refundBankName) {
-      toast.error("Please provide valid bank details.");
-      return;
-    }
-
-    if (!refundAccountName) {
-      toast.error("Please provide account name.");
       return;
     }
 
@@ -363,11 +285,6 @@ export function OrdersContent() {
           orderId: refundOrder.id,
           reason: refundReason,
           proof: proofUrl,
-          bankName: refundBankName,
-          bankCode: refundBankCode,
-          accountNumber: refundAccountNumber,
-          accountName: refundAccountName,
-          saveBankDetails
         }),
       });
 
@@ -782,110 +699,6 @@ export function OrdersContent() {
 
               <Separator className="my-4" />
 
-              {/* Bank Details Section */}
-              <div className="space-y-4">
-                <h4 className="font-semibold text-gray-800 flex items-center gap-2">
-                  Refund Destination
-                </h4>
-
-                {/* Saved Banks Dropdown */}
-                {savedBanks.length > 0 && (
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Saved Banks
-                    </label>
-                    <select
-                      value={selectedSavedBankId}
-                      onChange={handleSavedBankChange}
-                      className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-violet-500 focus:border-transparent bg-white"
-                    >
-                      <option value="new">-- Enter New Bank Details --</option>
-                      {savedBanks.map(bank => (
-                        <option key={bank.id} value={bank.id}>
-                          {bank.bankName} - {bank.accountNumber} ({bank.accountName})
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                )}
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Bank Name <span className="text-red-500">*</span>
-                    </label>
-                    <select
-                      value={refundBankCode} // We verify based on code
-                      onChange={(e) => {
-                        const code = e.target.value;
-                        const name = banks.find(b => b.code === code)?.name || "";
-                        setRefundBankCode(code);
-                        setRefundBankName(name);
-                      }}
-                      disabled={selectedSavedBankId !== "new"}
-                      className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-violet-500 focus:border-transparent bg-white disabled:bg-gray-100"
-                    >
-                      <option value="">Select Bank</option>
-                      {banks.map(bank => (
-                        <option key={bank.code} value={bank.code}>{bank.name}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Account Number <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      value={refundAccountNumber}
-                      onChange={(e) => {
-                        const val = e.target.value.replace(/\D/g, '').slice(0, 10);
-                        setRefundAccountNumber(val);
-                      }}
-                      disabled={selectedSavedBankId !== "new"}
-                      placeholder="0000000000"
-                      className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-violet-500 focus:border-transparent disabled:bg-gray-100"
-                    />
-                  </div>
-                </div>
-
-                {/* Account Name Input (Manual) */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Account Name <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    value={refundAccountName}
-                    onChange={(e) => setRefundAccountName(e.target.value)}
-                    disabled={selectedSavedBankId !== "new"}
-                    placeholder="Enter Account Name"
-                    className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-violet-500 focus:border-transparent disabled:bg-gray-100"
-                  />
-                </div>
-
-                {/* Warning / Note */}
-                <div className="flex items-start gap-2 p-3 bg-yellow-50 text-yellow-800 rounded-lg text-xs">
-                  <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
-                  <p>Please ensure the account details entered above are correct. We will not be responsible for funds sent to the wrong account.</p>
-                </div>
-
-                {/* Save Checkbox */}
-                {selectedSavedBankId === "new" && (
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      id="saveBank"
-                      checked={saveBankDetails}
-                      onChange={(e) => setSaveBankDetails(e.target.checked)}
-                      className="w-4 h-4 text-violet-600 rounded border-gray-300 focus:ring-violet-500"
-                    />
-                    <label htmlFor="saveBank" className="text-sm text-gray-700 select-none cursor-pointer">
-                      Save these bank details for future refunds
-                    </label>
-                  </div>
-                )}
-              </div>
 
             </div>
 
