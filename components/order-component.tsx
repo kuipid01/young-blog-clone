@@ -9,12 +9,17 @@ import {
   Filter,
   ChevronDown,
   X,
-  Package,
-  Copy,
+  Upload, // Import Upload icon
+  Check,
+  AlertTriangle,
+  Package, // Moved Package here
+  Copy,    // Moved Copy here
 } from "lucide-react";
 import { toast } from "sonner";
 import { useGetLoggedInUserId } from "../app/utils/getloggedinuser";
 import { Separator } from "./ui/separator";
+import { uploadToCloudinary } from "../app/utils/upload-to-cloundinary"; // Import Cloudinary util
+
 
 // Define a type for an Order to improve type safety (optional but good practice)
 interface Order {
@@ -36,8 +41,10 @@ interface Order {
   data: string[];
   quantity: number;
   totalPrice: number;
-  status: "completed" | "pending" | "failed";
+  status: "completed" | "pending" | "failed" | "refund_pending" | "refunded" | "denied";
   createdAt: string;
+  refundReason?: string;
+  refundProof?: string;
 }
 
 // Mock Data
@@ -99,6 +106,26 @@ export function OrdersContent() {
   const [isLoading, setIsLoading] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null); // State for View Details modal
 
+  // Refund Modal State
+  const [isRefundModalOpen, setIsRefundModalOpen] = useState(false);
+  const [refundOrder, setRefundOrder] = useState<Order | null>(null);
+  const [refundReason, setRefundReason] = useState("");
+  const [refundProofFile, setRefundProofFile] = useState<File | null>(null);
+  const [isRefundSubmitting, setIsRefundSubmitting] = useState(false);
+
+  // Bank Details State
+  const [banks, setBanks] = useState<{ name: string; code: string }[]>([]);
+  const [savedBanks, setSavedBanks] = useState<any[]>([]);
+  const [selectedSavedBankId, setSelectedSavedBankId] = useState<string>("new");
+  const [refundBankName, setRefundBankName] = useState("");
+  const [refundBankCode, setRefundBankCode] = useState("");
+  const [refundAccountNumber, setRefundAccountNumber] = useState("");
+  const [refundAccountName, setRefundAccountName] = useState("");
+
+  const [saveBankDetails, setSaveBankDetails] = useState(false);
+
+
+
   const filteredOrders = orders?.filter((order) => {
     const matchesSearch =
       order.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -142,6 +169,24 @@ export function OrdersContent() {
         return (
           <span className="px-3 py-1 text-xs font-medium rounded-full bg-red-100 text-red-700">
             Failed
+          </span>
+        );
+      case "refund_pending":
+        return (
+          <span className="px-3 py-1 text-xs font-medium rounded-full bg-orange-100 text-orange-700">
+            Refund Pending
+          </span>
+        );
+      case "refunded":
+        return (
+          <span className="px-3 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-700">
+            Refunded
+          </span>
+        );
+      case "denied":
+        return (
+          <span className="px-3 py-1 text-xs font-medium rounded-full bg-red-100 text-red-700">
+            Refund Denied
           </span>
         );
       default:
@@ -212,6 +257,142 @@ export function OrdersContent() {
   const closeViewDetails = () => {
     setSelectedOrder(null);
   };
+
+  const openRefundModal = (order: Order) => {
+    setRefundOrder(order);
+    setRefundReason("");
+    setRefundProofFile(null);
+    setIsRefundModalOpen(true);
+    // Close detail view if open
+    setSelectedOrder(null);
+
+    // Reset bank details
+    setRefundBankName("");
+    setRefundBankCode("");
+    setRefundAccountNumber("");
+    setRefundAccountName("");
+    setSelectedSavedBankId("new");
+    setSaveBankDetails(false);
+
+    // Fetch banks and saved banks
+    fetchBanks();
+    fetchSavedBanks();
+  };
+
+  const fetchBanks = async () => {
+    try {
+      const res = await fetch("/api/paystack/banks");
+      const data = await res.json();
+      if (data.status) {
+        setBanks(data.data);
+      }
+    } catch (error) {
+      console.error("Failed to fetch banks", error);
+    }
+  };
+
+  const fetchSavedBanks = async () => {
+    if (!userId) return;
+    try {
+      const res = await fetch(`/api/user/saved-banks/${userId}`);
+      const data = await res.json();
+      if (Array.isArray(data)) {
+        setSavedBanks(data);
+      }
+    } catch (error) {
+      console.error("Failed to fetch saved banks", error);
+    }
+  };
+
+  // Removed automatic account resolution
+
+
+  const handleSavedBankChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const val = e.target.value;
+    setSelectedSavedBankId(val);
+    if (val === "new") {
+      setRefundBankName("");
+      setRefundBankCode("");
+      setRefundAccountNumber("");
+      setRefundAccountName("");
+    } else {
+      const bank = savedBanks.find((b) => b.id === val);
+      if (bank) {
+        setRefundBankName(bank.bankName);
+        setRefundBankCode(bank.bankCode || ""); // Assumes saved bank has code, likely need to store it
+        setRefundAccountNumber(bank.accountNumber);
+        setRefundAccountName(bank.accountName);
+      }
+    }
+  };
+
+
+  const closeRefundModal = () => {
+    setIsRefundModalOpen(false);
+    setRefundOrder(null);
+  };
+
+  const handleRefundSubmit = async () => {
+    if (!refundOrder || !refundReason) {
+      toast.error("Please provide a reason for the refund.");
+      return;
+    }
+
+    if (!refundAccountNumber || !refundAccountName || !refundBankName) {
+      toast.error("Please provide valid bank details.");
+      return;
+    }
+
+    if (!refundAccountName) {
+      toast.error("Please provide account name.");
+      return;
+    }
+
+    setIsRefundSubmitting(true);
+    try {
+      let proofUrl = "";
+      if (refundProofFile) {
+        proofUrl = await uploadToCloudinary(refundProofFile);
+      }
+
+      const res = await fetch("/api/orders/refund", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId,
+          orderId: refundOrder.id,
+          reason: refundReason,
+          proof: proofUrl,
+          bankName: refundBankName,
+          bankCode: refundBankCode,
+          accountNumber: refundAccountNumber,
+          accountName: refundAccountName,
+          saveBankDetails
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.message || "Refund request failed.");
+      }
+
+      toast.success("Refund request submitted successfully.");
+
+      // Update local state
+      if (orders) {
+        setOrders(orders.map(o => o.id === refundOrder.id ? { ...o, status: "refund_pending" } : o));
+      }
+
+      closeRefundModal();
+    } catch (error: any) {
+      console.error(error);
+      toast.error(error.message || "An error occurred.");
+    } finally {
+      setIsRefundSubmitting(false);
+    }
+  };
+
   // --- Rendering Logic ---
   const handleCopy = () => {
     navigator.clipboard
@@ -288,6 +469,9 @@ export function OrdersContent() {
               <option value="completed">Completed</option>
               <option value="pending">Pending</option>
               <option value="failed">Failed</option>
+              <option value="refund_pending">Refund Pending</option>
+              <option value="refunded">Refunded</option>
+              <option value="denied">Refund Denied</option>
             </select>
             <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" />
           </div>
@@ -328,7 +512,8 @@ export function OrdersContent() {
                 filteredOrders?.map((order) => (
                   <tr
                     key={order.id}
-                    className="hover:bg-gray-50 transition-colors"
+                    className={`hover:bg-gray-50 transition-colors ${["refund_pending", "refunded", "denied"].includes(order.status) ? "opacity-60 bg-gray-50/50" : ""
+                      }`}
                   >
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className="text-sm font-medium text-violet-600">
@@ -515,21 +700,215 @@ export function OrdersContent() {
                 Close
               </button>
               {selectedOrder.status === "completed" && (
-                <button
-                  onClick={() => {
-                    downloadOrder(selectedOrder);
-                    closeViewDetails();
-                  }}
-                  className="px-4 py-2 text-sm font-medium rounded-lg bg-violet-600 text-white hover:bg-violet-700 transition-colors flex items-center gap-1"
-                >
-                  <Download className="w-4 h-4" />
-                  Download Order
-                </button>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => {
+                      downloadOrder(selectedOrder);
+                      closeViewDetails();
+                    }}
+                    className="px-4 py-2 text-sm font-medium rounded-lg bg-violet-600 text-white hover:bg-violet-700 transition-colors flex items-center gap-1"
+                  >
+                    <Download className="w-4 h-4" />
+                    Download Order
+                  </button>
+                  <button
+                    onClick={() => openRefundModal(selectedOrder)}
+                    className="px-4 py-2 text-sm font-medium rounded-lg text-red-600 border border-red-200 hover:bg-red-50 transition-colors"
+                  >
+                    Request Refund
+                  </button>
+                </div>
               )}
             </div>
           </div>
         </div>
       )}
+
+      {/* Refund Request Modal */}
+      {isRefundModalOpen && refundOrder && (
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-[60] flex justify-center items-center p-4">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[95vh] overflow-y-auto">
+            <div className="flex justify-between items-center p-6 border-b border-gray-200">
+              <h3 className="text-xl font-bold text-gray-900">
+                Request Refund
+              </h3>
+              <button
+                onClick={closeRefundModal}
+                className="p-1 rounded-full hover:bg-gray-100"
+              >
+                <X className="w-6 h-6 text-gray-500" />
+              </button>
+            </div>
+            <div className="p-6 space-y-4">
+              <p className="text-sm text-gray-600">
+                Requesting refund for Order <span className="font-semibold">#{refundOrder.id}</span>
+              </p>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Reason for Refund <span className="text-red-500">*</span>
+                </label>
+                <textarea
+                  value={refundReason}
+                  onChange={(e) => setRefundReason(e.target.value)}
+                  placeholder="Please explain why you want a refund..."
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-violet-500 focus:border-transparent min-h-[100px]"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Proof (Optional)
+                </label>
+                <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:bg-gray-50 transition-colors cursor-pointer relative">
+                  <input
+                    type="file"
+                    accept="image/*,.pdf"
+                    onChange={(e) => {
+                      if (e.target.files?.[0]) {
+                        setRefundProofFile(e.target.files[0]);
+                      }
+                    }}
+                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                  />
+                  <div className="flex flex-col items-center gap-2">
+                    <Upload className="w-8 h-8 text-gray-400" />
+                    <span className="text-sm text-gray-500">
+                      {refundProofFile ? refundProofFile.name : "Click to upload proof"}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <Separator className="my-4" />
+
+              {/* Bank Details Section */}
+              <div className="space-y-4">
+                <h4 className="font-semibold text-gray-800 flex items-center gap-2">
+                  Refund Destination
+                </h4>
+
+                {/* Saved Banks Dropdown */}
+                {savedBanks.length > 0 && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Saved Banks
+                    </label>
+                    <select
+                      value={selectedSavedBankId}
+                      onChange={handleSavedBankChange}
+                      className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-violet-500 focus:border-transparent bg-white"
+                    >
+                      <option value="new">-- Enter New Bank Details --</option>
+                      {savedBanks.map(bank => (
+                        <option key={bank.id} value={bank.id}>
+                          {bank.bankName} - {bank.accountNumber} ({bank.accountName})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Bank Name <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      value={refundBankCode} // We verify based on code
+                      onChange={(e) => {
+                        const code = e.target.value;
+                        const name = banks.find(b => b.code === code)?.name || "";
+                        setRefundBankCode(code);
+                        setRefundBankName(name);
+                      }}
+                      disabled={selectedSavedBankId !== "new"}
+                      className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-violet-500 focus:border-transparent bg-white disabled:bg-gray-100"
+                    >
+                      <option value="">Select Bank</option>
+                      {banks.map(bank => (
+                        <option key={bank.code} value={bank.code}>{bank.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Account Number <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={refundAccountNumber}
+                      onChange={(e) => {
+                        const val = e.target.value.replace(/\D/g, '').slice(0, 10);
+                        setRefundAccountNumber(val);
+                      }}
+                      disabled={selectedSavedBankId !== "new"}
+                      placeholder="0000000000"
+                      className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-violet-500 focus:border-transparent disabled:bg-gray-100"
+                    />
+                  </div>
+                </div>
+
+                {/* Account Name Input (Manual) */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Account Name <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={refundAccountName}
+                    onChange={(e) => setRefundAccountName(e.target.value)}
+                    disabled={selectedSavedBankId !== "new"}
+                    placeholder="Enter Account Name"
+                    className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-violet-500 focus:border-transparent disabled:bg-gray-100"
+                  />
+                </div>
+
+                {/* Warning / Note */}
+                <div className="flex items-start gap-2 p-3 bg-yellow-50 text-yellow-800 rounded-lg text-xs">
+                  <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+                  <p>Please ensure the account details entered above are correct. We will not be responsible for funds sent to the wrong account.</p>
+                </div>
+
+                {/* Save Checkbox */}
+                {selectedSavedBankId === "new" && (
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      id="saveBank"
+                      checked={saveBankDetails}
+                      onChange={(e) => setSaveBankDetails(e.target.checked)}
+                      className="w-4 h-4 text-violet-600 rounded border-gray-300 focus:ring-violet-500"
+                    />
+                    <label htmlFor="saveBank" className="text-sm text-gray-700 select-none cursor-pointer">
+                      Save these bank details for future refunds
+                    </label>
+                  </div>
+                )}
+              </div>
+
+            </div>
+
+            <div className="p-6 border-t border-gray-200 flex justify-end gap-3">
+              <button
+                onClick={closeRefundModal}
+                disabled={isRefundSubmitting}
+                className="px-4 py-2 text-sm font-medium rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleRefundSubmit}
+                disabled={isRefundSubmitting || !refundReason.trim()}
+                className="px-4 py-2 text-sm font-medium rounded-lg bg-red-600 text-white hover:bg-red-700 transition-colors disabled:opacity-50 flex items-center gap-2"
+              >
+                {isRefundSubmitting ? "Submitting..." : "Submit Request"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

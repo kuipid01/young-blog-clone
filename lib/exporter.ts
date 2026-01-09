@@ -6,6 +6,7 @@ import {
   payments,
   paymentsRelations,
   product,
+  savedBankDetails,
   user,
   userRelations,
   wallets,
@@ -30,4 +31,5 @@ export const schema = {
   paymentsRelations,
   walletsRelations,
   userRelations,
+  savedBankDetails
 };
