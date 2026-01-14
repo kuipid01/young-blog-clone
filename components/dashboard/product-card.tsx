@@ -15,6 +15,7 @@ export interface Product {
   stock: number;
   category: string;
   inStock: boolean;
+  amount: number;
 }
 
 interface ProductCardProps {

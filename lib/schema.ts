@@ -228,7 +228,17 @@ export const order = pgTable("orders", {
   refund_bank_name: varchar("refund_bank_name"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
+
+  // Refund request fields
+  refundReason: text("refund_reason"),
+  refundProof: text("refund_proof"),
+  // Admin response
+  refundAdminNote: text("refund_admin_note"),
 });
+
+// SAVED BANK DETAILS TABLE
+// SAVED BANK DETAILS TABLE (Removed)
+
 
 export const orderRelations = relations(order, ({ one }) => ({
   user: one(user, {
@@ -267,6 +277,7 @@ export const userRelations = relations(user, ({ many, one }) => ({
     references: [wallets.userId],
   }),
 }));
+
 
 export const productsRelations = relations(product, ({ many }) => ({
   // Define the 'many' relationship to logs (One Product has Many Logs)

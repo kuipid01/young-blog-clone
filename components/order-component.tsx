@@ -9,12 +9,15 @@ import {
   Filter,
   ChevronDown,
   X,
-  Package,
-  Copy,
+  Upload, // Import Upload icon
+  Package, // Moved Package here
+  Copy,    // Moved Copy here
 } from "lucide-react";
 import { toast } from "sonner";
 import { useGetLoggedInUserId } from "../app/utils/getloggedinuser";
 import { Separator } from "./ui/separator";
+import { uploadToCloudinary } from "../app/utils/upload-to-cloundinary"; // Import Cloudinary util
+
 
 // Define a type for an Order to improve type safety (optional but good practice)
 interface Order {
@@ -36,8 +39,10 @@ interface Order {
   data: string[];
   quantity: number;
   totalPrice: number;
-  status: "completed" | "pending" | "failed";
+  status: "completed" | "pending" | "failed" | "refund_pending" | "refunded" | "denied";
   createdAt: string;
+  refundReason?: string;
+  refundProof?: string;
 }
 
 // Mock Data
@@ -99,6 +104,17 @@ export function OrdersContent() {
   const [isLoading, setIsLoading] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null); // State for View Details modal
 
+  // Refund Modal State
+  const [isRefundModalOpen, setIsRefundModalOpen] = useState(false);
+  const [refundOrder, setRefundOrder] = useState<Order | null>(null);
+  const [refundReason, setRefundReason] = useState("");
+  const [refundProofFile, setRefundProofFile] = useState<File | null>(null);
+  const [isRefundSubmitting, setIsRefundSubmitting] = useState(false);
+
+
+
+
+
   const filteredOrders = orders?.filter((order) => {
     const matchesSearch =
       order.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -142,6 +158,24 @@ export function OrdersContent() {
         return (
           <span className="px-3 py-1 text-xs font-medium rounded-full bg-red-100 text-red-700">
             Failed
+          </span>
+        );
+      case "refund_pending":
+        return (
+          <span className="px-3 py-1 text-xs font-medium rounded-full bg-orange-100 text-orange-700">
+            Refund Pending
+          </span>
+        );
+      case "refunded":
+        return (
+          <span className="px-3 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-700">
+            Refunded
+          </span>
+        );
+      case "denied":
+        return (
+          <span className="px-3 py-1 text-xs font-medium rounded-full bg-red-100 text-red-700">
+            Refund Denied
           </span>
         );
       default:
@@ -212,6 +246,70 @@ export function OrdersContent() {
   const closeViewDetails = () => {
     setSelectedOrder(null);
   };
+
+  const openRefundModal = (order: Order) => {
+    setRefundOrder(order);
+    setRefundReason("");
+    setRefundProofFile(null);
+    setIsRefundModalOpen(true);
+    // Close detail view if open
+    setSelectedOrder(null);
+  };
+
+
+
+
+  const closeRefundModal = () => {
+    setIsRefundModalOpen(false);
+    setRefundOrder(null);
+  };
+
+  const handleRefundSubmit = async () => {
+    if (!refundOrder || !refundReason) {
+      toast.error("Please provide a reason for the refund.");
+      return;
+    }
+
+    setIsRefundSubmitting(true);
+    try {
+      let proofUrl = "";
+      if (refundProofFile) {
+        proofUrl = await uploadToCloudinary(refundProofFile);
+      }
+
+      const res = await fetch("/api/orders/refund", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId,
+          orderId: refundOrder.id,
+          reason: refundReason,
+          proof: proofUrl,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.message || "Refund request failed.");
+      }
+
+      toast.success("Refund request submitted successfully.");
+
+      // Update local state
+      if (orders) {
+        setOrders(orders.map(o => o.id === refundOrder.id ? { ...o, status: "refund_pending" } : o));
+      }
+
+      closeRefundModal();
+    } catch (error: any) {
+      console.error(error);
+      toast.error(error.message || "An error occurred.");
+    } finally {
+      setIsRefundSubmitting(false);
+    }
+  };
+
   // --- Rendering Logic ---
   const handleCopy = () => {
     navigator.clipboard
@@ -288,6 +386,9 @@ export function OrdersContent() {
               <option value="completed">Completed</option>
               <option value="pending">Pending</option>
               <option value="failed">Failed</option>
+              <option value="refund_pending">Refund Pending</option>
+              <option value="refunded">Refunded</option>
+              <option value="denied">Refund Denied</option>
             </select>
             <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" />
           </div>
@@ -328,7 +429,8 @@ export function OrdersContent() {
                 filteredOrders?.map((order) => (
                   <tr
                     key={order.id}
-                    className="hover:bg-gray-50 transition-colors"
+                    className={`hover:bg-gray-50 transition-colors ${["refund_pending", "refunded", "denied"].includes(order.status) ? "opacity-60 bg-gray-50/50" : ""
+                      }`}
                   >
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className="text-sm font-medium text-violet-600">
@@ -515,21 +617,111 @@ export function OrdersContent() {
                 Close
               </button>
               {selectedOrder.status === "completed" && (
-                <button
-                  onClick={() => {
-                    downloadOrder(selectedOrder);
-                    closeViewDetails();
-                  }}
-                  className="px-4 py-2 text-sm font-medium rounded-lg bg-violet-600 text-white hover:bg-violet-700 transition-colors flex items-center gap-1"
-                >
-                  <Download className="w-4 h-4" />
-                  Download Order
-                </button>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => {
+                      downloadOrder(selectedOrder);
+                      closeViewDetails();
+                    }}
+                    className="px-4 py-2 text-sm font-medium rounded-lg bg-violet-600 text-white hover:bg-violet-700 transition-colors flex items-center gap-1"
+                  >
+                    <Download className="w-4 h-4" />
+                    Download Order
+                  </button>
+                  <button
+                    onClick={() => openRefundModal(selectedOrder)}
+                    className="px-4 py-2 text-sm font-medium rounded-lg text-red-600 border border-red-200 hover:bg-red-50 transition-colors"
+                  >
+                    Request Refund
+                  </button>
+                </div>
               )}
             </div>
           </div>
         </div>
       )}
+
+      {/* Refund Request Modal */}
+      {isRefundModalOpen && refundOrder && (
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-[60] flex justify-center items-center p-4">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[95vh] overflow-y-auto">
+            <div className="flex justify-between items-center p-6 border-b border-gray-200">
+              <h3 className="text-xl font-bold text-gray-900">
+                Request Refund
+              </h3>
+              <button
+                onClick={closeRefundModal}
+                className="p-1 rounded-full hover:bg-gray-100"
+              >
+                <X className="w-6 h-6 text-gray-500" />
+              </button>
+            </div>
+            <div className="p-6 space-y-4">
+              <p className="text-sm text-gray-600">
+                Requesting refund for Order <span className="font-semibold">#{refundOrder.id}</span>
+              </p>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Reason for Refund <span className="text-red-500">*</span>
+                </label>
+                <textarea
+                  value={refundReason}
+                  onChange={(e) => setRefundReason(e.target.value)}
+                  placeholder="Please explain why you want a refund..."
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-violet-500 focus:border-transparent min-h-[100px]"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Proof (Optional)
+                </label>
+                <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:bg-gray-50 transition-colors cursor-pointer relative">
+                  <input
+                    type="file"
+                    accept="image/*,.pdf"
+                    onChange={(e) => {
+                      if (e.target.files?.[0]) {
+                        setRefundProofFile(e.target.files[0]);
+                      }
+                    }}
+                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                  />
+                  <div className="flex flex-col items-center gap-2">
+                    <Upload className="w-8 h-8 text-gray-400" />
+                    <span className="text-sm text-gray-500">
+                      {refundProofFile ? refundProofFile.name : "Click to upload proof"}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <Separator className="my-4" />
+
+
+            </div>
+
+            <div className="p-6 border-t border-gray-200 flex justify-end gap-3">
+              <button
+                onClick={closeRefundModal}
+                disabled={isRefundSubmitting}
+                className="px-4 py-2 text-sm font-medium rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleRefundSubmit}
+                disabled={isRefundSubmitting || !refundReason.trim()}
+                className="px-4 py-2 text-sm font-medium rounded-lg bg-red-600 text-white hover:bg-red-700 transition-colors disabled:opacity-50 flex items-center gap-2"
+              >
+                {isRefundSubmitting ? "Submitting..." : "Submit Request"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
