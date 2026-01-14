@@ -210,31 +210,29 @@ export const order = pgTable("orders", {
     .notNull()
     .references(() => user.id),
 
-  productId: varchar("product_id", { length: 30 }), // optional
+  productId: varchar("product_id", { length: 30 }),
 
   logId: varchar("log_id", { length: 30 }).references(() => logs.id),
   trans_id: varchar("trans_id", { length: 50 }),
 
-  data: json("data").notNull(), // <-- stores your array natively
+  data: json("data").notNull(),
 
   quantity: integer("quantity").notNull().default(1),
   totalPrice: numeric("total_price", { precision: 12, scale: 2 }).notNull(),
-  status: varchar("status").notNull().default("pending_debit"),
-  refund_reason: varchar("refund_reason"),
-  refund_proof: varchar("refund_proof"),
-  refund_account_name: varchar("refund_account_name"),
-  refund_account_number: varchar("refund_account_number"),
-  refund_admin_note: varchar("refund_admin_note"),
-  refund_bank_name: varchar("refund_bank_name"),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
 
-  // Refund request fields
+  status: varchar("status").notNull().default("pending_debit"),
+
   refundReason: text("refund_reason"),
   refundProof: text("refund_proof"),
-  // Admin response
+  refundAccountName: varchar("refund_account_name"),
+  refundAccountNumber: varchar("refund_account_number"),
   refundAdminNote: text("refund_admin_note"),
+  refundBankName: varchar("refund_bank_name"),
+
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
+
 
 // SAVED BANK DETAILS TABLE
 // SAVED BANK DETAILS TABLE (Removed)
