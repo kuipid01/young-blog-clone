@@ -20,7 +20,7 @@ const paymentHistory = [
 ];
 
 export function FundWalletContent() {
-    const { payments } = usePayments();
+  const { payments } = usePayments();
   const router = useRouter();
   const [amount, setAmount] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("");
@@ -85,9 +85,8 @@ export function FundWalletContent() {
                   {paymentMethod || "Select Payment Method"}
                 </span>
                 <ChevronDown
-                  className={`w-5 h-5 text-gray-400 transition-transform ${
-                    isDropdownOpen ? "rotate-180" : ""
-                  }`}
+                  className={`w-5 h-5 text-gray-400 transition-transform ${isDropdownOpen ? "rotate-180" : ""
+                    }`}
                 />
               </button>
 
@@ -125,68 +124,68 @@ export function FundWalletContent() {
           </h3>
         </div>
         <div className="bg-white rounded-2xl border border-gray-200">
-       
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-gray-100">
-                <th className="text-left py-4 px-6 text-sm font-semibold text-gray-700">
-                  TRX
-                </th>
-                <th className="text-left py-4 px-6 text-sm font-semibold text-gray-700">
-                  TIME
-                </th>
-                <th className="text-left py-4 px-6 text-sm font-semibold text-gray-700">
-                  AMOUNT
-                </th>
-                <th className="text-left py-4 px-6 text-sm font-semibold text-gray-700">
-                  STATUS
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {payments.length === 0 ? (
-                <tr>
-                  <td colSpan={4} className="py-12 text-center text-gray-500">
-                    Data not found
-                  </td>
+
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-gray-100">
+                  <th className="text-left py-4 px-6 text-sm font-semibold text-gray-700">
+                    TRX
+                  </th>
+                  <th className="text-left py-4 px-6 text-sm font-semibold text-gray-700">
+                    TIME
+                  </th>
+                  <th className="text-left py-4 px-6 text-sm font-semibold text-gray-700">
+                    AMOUNT
+                  </th>
+                  <th className="text-left py-4 px-6 text-sm font-semibold text-gray-700">
+                    STATUS
+                  </th>
                 </tr>
-              ) : (
-                payments?.slice(0, 8)?.map((item, index: number) => (
-                  <tr key={index} className="border-b border-gray-50">
-                    <td className="py-4 px-6 text-sm text-gray-600">
-                      {item.id.slice(0, 4)}
-                    </td>
-                    <td className="py-4 px-6 text-sm text-gray-600">
-                      {item?.createdAt && (
-                        <span>
-                          {new Date(item?.createdAt).toLocaleString()}
-                        </span>
-                      )}
-                    </td>
-                    <td className="py-4 px-6 text-sm text-gray-600">
-                      {item.amount}
-                    </td>
-                    <td>
-                      <button
-                        className={clsx(
-                          " uppercase w-fit h-fit px-3 py-1 font-bold  rounded-md text-sm text-gray-600",
-                          item.status === "funded"
-                            ? "bg-green-500 text-white"
-                            : " bg-red-500 text-white"
-                        )}
-                      >
-                        {" "}
-                        {item.status}
-                      </button>{" "}
+              </thead>
+              <tbody>
+                {payments.length === 0 ? (
+                  <tr>
+                    <td colSpan={4} className="py-12 text-center text-gray-500">
+                      Data not found
                     </td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+                ) : (
+                  payments?.map((item, index: number) => (
+                    <tr key={index} className="border-b border-gray-50">
+                      <td className="py-4 px-6 text-sm text-gray-600">
+                        {item.id.slice(0, 4)}
+                      </td>
+                      <td className="py-4 px-6 text-sm text-gray-600">
+                        {item?.createdAt && (
+                          <span>
+                            {new Date(item?.createdAt).toLocaleString()}
+                          </span>
+                        )}
+                      </td>
+                      <td className="py-4 px-6 text-sm text-gray-600">
+                        {item.amount}
+                      </td>
+                      <td>
+                        <button
+                          className={clsx(
+                            " uppercase w-fit h-fit px-3 py-1 font-bold  rounded-md text-sm text-gray-600",
+                            item.status === "funded"
+                              ? "bg-green-500 text-white"
+                              : " bg-red-500 text-white"
+                          )}
+                        >
+                          {" "}
+                          {item.status}
+                        </button>{" "}
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
-      </div>
       </div>
     </div>
   );

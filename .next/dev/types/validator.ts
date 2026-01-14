@@ -200,6 +200,33 @@ type RouteHandlerConfig<Route extends AppRouteHandlerRoutes = AppRouteHandlerRou
   type __Unused = __Check
 }
 
+// Validate ../../../app/api/korapay/initialize/route.ts
+{
+  type __IsExpected<Specific extends RouteHandlerConfig<"/api/korapay/initialize">> = Specific
+  const handler = {} as typeof import("../../../app/api/korapay/initialize/route.js")
+  type __Check = __IsExpected<typeof handler>
+  // @ts-ignore
+  type __Unused = __Check
+}
+
+// Validate ../../../app/api/korapay/verify/route.ts
+{
+  type __IsExpected<Specific extends RouteHandlerConfig<"/api/korapay/verify">> = Specific
+  const handler = {} as typeof import("../../../app/api/korapay/verify/route.js")
+  type __Check = __IsExpected<typeof handler>
+  // @ts-ignore
+  type __Unused = __Check
+}
+
+// Validate ../../../app/api/korapay/webhook/route.ts
+{
+  type __IsExpected<Specific extends RouteHandlerConfig<"/api/korapay/webhook">> = Specific
+  const handler = {} as typeof import("../../../app/api/korapay/webhook/route.js")
+  type __Check = __IsExpected<typeof handler>
+  // @ts-ignore
+  type __Unused = __Check
+}
+
 // Validate ../../../app/api/login/route.ts
 {
   type __IsExpected<Specific extends RouteHandlerConfig<"/api/login">> = Specific

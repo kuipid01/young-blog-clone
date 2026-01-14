@@ -5,6 +5,9 @@ import ProfileModal from "./wallet-virtual";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { jwtDecode } from "jwt-decode";
+import { useSearchParams } from "next/navigation";
+import { CheckCircle2 } from "lucide-react";
+import { CustomModal, CustomModalHeader, CustomModalBody, CustomModalFooter } from "./custom-modal";
 // import { user, wallets } from "../lib/schema"; // <-- Not needed in component logic
 import { WalletCardSkeleton } from "./wallet-card-loader";
 import { useUserOrders } from "../app/hooks/user-orders";
@@ -35,6 +38,9 @@ export function DashboardHome() {
 
   // NEW STATE: Control visibility of the amount input field
   const [showAmountInput, setShowAmountInput] = useState(false);
+  const searchParams = useSearchParams();
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [verifying, setVerifying] = useState(false);
 
   const totalDeposit = payments
     ?.filter((payment) => payment.status === "funded")
@@ -124,17 +130,13 @@ export function DashboardHome() {
     amount: number; // Amount in kobo/cents
   }
 
-  const initiateTemporaryWalletFunding = useCallback(
-    async (
-      fundingData: FundingRequestData
-    ): Promise<PaystackInitResponse["data"] | null> => {
-      console.log("Starting temporary wallet funding process...");
+  const initiateKoraFunding = useCallback(
+    async (fundingData: any): Promise<any | null> => {
+      console.log("Starting KoraPay funding process...");
 
       try {
         setCreatingAccount(true);
-        const fundingUrl = "/api/funding";
-
-        const fundingResponse = await fetch(fundingUrl, {
+        const response = await fetch("/api/korapay/initialize", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -142,91 +144,106 @@ export function DashboardHome() {
           body: JSON.stringify(fundingData),
         });
 
-        if (!fundingResponse.ok) {
-          const error = await fundingResponse.json();
-          throw new Error(
-            error.message ||
-              `Funding initiation failed: ${JSON.stringify(error)}`
-          );
+        const result = await response.json();
+
+        if (!response.ok) {
+          throw new Error(result.message || "Failed to initialize KoraPay charge");
         }
 
-        const fundingResult: PaystackInitResponse =
-          await fundingResponse.json();
-
-        if (fundingResult.status !== true) {
-          throw new Error(
-            fundingResult.message ||
-              "Paystack returned an error during initiation."
-          );
+        if (result.status && result.data.checkout_url) {
+          toast.success("Redirecting to payment gateway...");
+          window.location.href = result.data.checkout_url;
         }
 
-        console.log("Funding Initiated Successfully:", fundingResult.data);
-        toast.success("Funding account created! you will be redirected.");
-        if (fundingResult.data.authorization_url) {
-          window.location.href = fundingResult.data.authorization_url;
-        }
-
-        return fundingResult.data;
+        return result.data;
       } catch (error) {
-        const errorMessage =
-          error instanceof Error ? error.message : "Unknown funding error.";
+        const errorMessage = error instanceof Error ? error.message : "Unknown funding error.";
         toast.error(errorMessage);
-        console.error("Temporary Funding Initiation Failed:", error);
-
+        console.error("KoraPay Funding Initiation Failed:", error);
         return null;
       } finally {
         setCreatingAccount(false);
       }
     },
     []
-  ); // Added useCallback for stability
+  );
 
   // --- NEW HANDLER FUNCTION ---
   const handleFundWalletClick = async () => {
-    // 1. Check for required profile data first
     if (checkWallet()) {
-      setIsOpen(true); // Open modal to complete profile
+      setIsOpen(true);
       return;
     }
 
-    // 2. If the input is not visible, show it
     if (!showAmountInput) {
       setShowAmountInput(true);
       return;
     }
 
-    // 3. If input is visible, attempt to initiate funding
     if (!user?.id || !user?.email) {
       toast.error("User session data is missing.");
       return;
     }
-    if (amount <= 0) {
-      toast.error("Please enter a valid amount greater than zero.");
+
+    if (amount < 100) {
+      toast.error("Minimum funding amount is ₦100.");
       return;
     }
 
-    // Paystack expects amount in kobo/cents (1 NGN = 100 kobo)
-    const amountInKobo = amount * 100;
+    const reference = `TRX-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
 
-    const fundingData: FundingRequestData = {
-      userId: user.id,
-      email: user.email,
-      amount: amountInKobo,
+    const koraFundingData = {
+      amount,
+      currency: "NGN",
+      reference,
+      customer: {
+        email: user.email,
+        name: userWallet?.firstName ? `${userWallet.firstName} ${userWallet.lastName}` : user.email,
+      },
+      metadata: {
+        user_id: user.id,
+      },
+      merchant_bears_cost: true,
     };
 
-    const result = await initiateTemporaryWalletFunding(fundingData);
+    const result = await initiateKoraFunding(koraFundingData);
 
-    // Optionally: After successful call, hide the input and reset amount
     if (result) {
       setShowAmountInput(false);
       setAmount(0);
-      // Implement logic to display the temporary account details here
     }
   };
 
   useEffect(() => {
     getWallet();
   }, [getWallet]);
+
+  useEffect(() => {
+    const reference = searchParams.get("reference");
+    if (reference && !verifying) {
+      const verifyPayment = async () => {
+        setVerifying(true);
+        try {
+          const res = await fetch(`/api/korapay/verify?reference=${reference}`);
+          const result = await res.json();
+          if (res.ok && result.status === true && result.data.status === "success") {
+            setShowSuccessModal(true);
+            // Optionally clear the query param from URL without refreshing
+            const url = new URL(window.location.href);
+            url.searchParams.delete("reference");
+            window.history.replaceState({}, "", url.pathname);
+          } else {
+            console.error("Payment verification failed or status not success", result);
+          }
+        } catch (error) {
+          console.error("Error verifying payment:", error);
+        } finally {
+          setVerifying(false);
+        }
+      };
+      verifyPayment();
+    }
+  }, [searchParams, verifying]);
 
   return (
     <div className="space-y-6">
@@ -262,7 +279,7 @@ export function DashboardHome() {
         <div className="bg-white rounded-2xl p-6 border border-gray-200">
           <p className="text-sm text-gray-500 mb-1">Payment</p>
           <h3 className="text-xl font-semibold text-gray-900 mb-4">
-            Top Up With Temporary Virtual Account
+            Top Up Your Wallet (KoraPay)
           </h3>
 
           {/* New: Conditional Input Field */}
@@ -293,12 +310,12 @@ export function DashboardHome() {
             disabled={creatingAccount || fetchingWallet}
           >
             {creatingAccount
-              ? "Initiating Funding..."
+              ? "Initiating Checkout..."
               : checkWallet()
-              ? "Complete Profile to Fund"
-              : showAmountInput
-              ? `Fund ₦${amount.toFixed(2)}`
-              : "Start Temporary Funding"}
+                ? "Complete Profile to Fund"
+                : showAmountInput
+                  ? `Pay ₦${amount.toLocaleString()}`
+                  : "Direct Top-Up"}
           </button>
         </div>
       </div>
@@ -374,7 +391,7 @@ export function DashboardHome() {
                   </td>
                 </tr>
               ) : (
-                payments?.slice(0, 8)?.map((item, index: number) => (
+                payments?.map((item, index: number) => (
                   <tr key={index} className="border-b border-gray-50">
                     <td className="py-4 px-6 text-sm text-gray-600">
                       {item.id.slice(0, 4)}
@@ -411,6 +428,34 @@ export function DashboardHome() {
       </div>
 
       <ProfileModal isOpen={isOpen} setIsOpen={setIsOpen} />
+
+      {/* Success Modal */}
+      <CustomModal open={showSuccessModal} onOpenChange={setShowSuccessModal}>
+        <CustomModalHeader onClose={() => setShowSuccessModal(false)}>
+          Payment Successful
+        </CustomModalHeader>
+        <CustomModalBody>
+          <div className="flex flex-col items-center justify-center py-6 text-center">
+            <div className="bg-green-100 p-3 rounded-full mb-4">
+              <CheckCircle2 className="w-12 h-12 text-green-600" />
+            </div>
+            <h3 className="text-lg font-bold text-gray-900 mb-2">
+              Wallet Funded Successfully!
+            </h3>
+            <p className="text-gray-600">
+              Your transaction has been verified and your wallet balance has been updated.
+            </p>
+          </div>
+        </CustomModalBody>
+        <CustomModalFooter>
+          <button
+            onClick={() => setShowSuccessModal(false)}
+            className="w-full py-3 bg-green-600 text-white rounded-xl font-semibold hover:bg-green-700 transition-colors"
+          >
+            Great, thanks!
+          </button>
+        </CustomModalFooter>
+      </CustomModal>
     </div>
   );
 }

@@ -125,6 +125,9 @@ export const payments = pgTable("payments", {
   // Proof: Optional string field for transaction hash or receipt URL
   proof: text("proof"),
 
+  // Payment Reference
+  paymentReference: text("payment_reference"),
+
   // Timestamps
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
@@ -217,7 +220,12 @@ export const order = pgTable("orders", {
   quantity: integer("quantity").notNull().default(1),
   totalPrice: numeric("total_price", { precision: 12, scale: 2 }).notNull(),
   status: varchar("status").notNull().default("pending_debit"),
-
+  refund_reason: varchar("refund_reason"),
+  refund_proof: varchar("refund_proof"),
+  refund_account_name: varchar("refund_account_name"),
+  refund_account_number: varchar("refund_account_number"),
+  refund_admin_note: varchar("refund_admin_note"),
+  refund_bank_name: varchar("refund_bank_name"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
