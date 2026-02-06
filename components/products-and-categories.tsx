@@ -48,7 +48,8 @@ const ProductsAndCategories: React.FC<Props> = ({
     categories.forEach((category) => {
       category.products.forEach((product) => {
         const base = Number(product.price) * rate;
-        const markup = base * 0.6;
+        //TODO MOVE MARKUP TO ENV
+        const markup = base * 0.65;
         prices[product.id] = (base + markup).toFixed(2);
       });
     });
@@ -145,10 +146,9 @@ const ProductsAndCategories: React.FC<Props> = ({
                     <button
                       disabled={isOut}
                       className={`px-3 py-2 rounded-full text-sm flex items-center space-x-1
-                        ${
-                          isOut
-                            ? "bg-gray-300 text-gray-500"
-                            : "bg-indigo-600 text-white hover:bg-indigo-700"
+                        ${isOut
+                          ? "bg-gray-300 text-gray-500"
+                          : "bg-indigo-600 text-white hover:bg-indigo-700"
                         }`}
                       onClick={async () => {
                         if (!rate) return toast.error("Rate unavailable.");
