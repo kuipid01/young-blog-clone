@@ -1,15 +1,14 @@
 {
+  "/api/affiliate/activate/route": "app/api/affiliate/activate/route.js",
+  "/api/affiliate/status/[userId]/route": "app/api/affiliate/status/[userId]/route.js",
   "/api/get-rate/route": "app/api/get-rate/route.js",
-  "/api/korapay/initialize/route": "app/api/korapay/initialize/route.js",
-  "/api/korapay/verify/route": "app/api/korapay/verify/route.js",
-  "/api/korapay/webhook/route": "app/api/korapay/webhook/route.js",
   "/api/login/route": "app/api/login/route.js",
   "/api/orders/[userId]/route": "app/api/orders/[userId]/route.js",
   "/api/payments/[userId]/route": "app/api/payments/[userId]/route.js",
   "/api/users/[userId]/route": "app/api/users/[userId]/route.js",
   "/api/wallet/[userId]/route": "app/api/wallet/[userId]/route.js",
   "/auth/login/page": "app/auth/login/page.js",
-  "/dashboard/fund-wallet/page": "app/dashboard/fund-wallet/page.js",
+  "/dashboard/affiliate/page": "app/dashboard/affiliate/page.js",
   "/dashboard/page": "app/dashboard/page.js",
   "/page": "app/page.js"
 }

@@ -36,11 +36,16 @@ export function useFetch<TResponse = any>(
       ? globalCache.get(queryKey)
       : null
   );
-  const [loading, setLoading] = useState<boolean>(!data);
+  const [loading, setLoading] = useState<boolean>(
+    !data && enabled
+  );
   const [error, setError] = useState<any>(null);
 
   const fetchData = useCallback(async () => {
-    if (!enabled) return;
+    if (!enabled) {
+      setLoading(false);
+      return;
+    }
 
     setLoading(true);
     setError(null);
@@ -88,6 +93,7 @@ export function useFetch<TResponse = any>(
       })
       .then((json) => {
         if (cache) globalCache.set(queryKey, json);
+        console.log(json, "jon returned");
         setData(json);
         return json;
       })
@@ -103,13 +109,14 @@ export function useFetch<TResponse = any>(
 
     inflightRequests.set(queryKey, fetchPromise);
     return fetchPromise;
-  }, [url, method, body, headers, enabled, queryKey, cache]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [url, method, JSON.stringify(body), JSON.stringify(headers), enabled, queryKey, cache]);
 
   // Refetch on mount or when deps change
   useEffect(() => {
     fetchData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [...deps]);
+  }, [fetchData, ...deps]);
 
   // Cleanup on unmount
   useEffect(() => {

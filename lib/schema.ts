@@ -16,6 +16,13 @@ import {
 import { createId } from "@paralleldrive/cuid2";
 
 export const logStatusEnum = pgEnum("log_status", ["used", "unused"]);
+export const affiliateStatusEnum = pgEnum("affiliate_status", [
+  "pending_payment",
+  "pending_approval",
+  "active",
+  "rejected",
+  "suspended",
+]);
 export type ProductType = InferSelectModel<typeof product>;
 export type LogType = InferSelectModel<typeof logs>;
 export type BasePaymentType = InferSelectModel<typeof payments>;
@@ -274,6 +281,48 @@ export const userRelations = relations(user, ({ many, one }) => ({
     fields: [user.id],
     references: [wallets.userId],
   }),
+  affiliateProfile: one(affiliates, {
+    fields: [user.id],
+    references: [affiliates.userId],
+  }),
+}));
+
+export const affiliates = pgTable("affiliates", {
+  id: varchar("id", { length: 30 })
+    .primaryKey()
+    .$defaultFn(() => createId()),
+  userId: varchar("user_id", { length: 30 })
+    .notNull()
+    .references(() => user.id)
+    .unique(),
+  status: affiliateStatusEnum("status").default("pending_payment").notNull(),
+  commissionRate: numeric("commission_rate", {
+    precision: 5,
+    scale: 2,
+  })
+    .default("10.00")
+    .notNull(),
+  totalEarnings: numeric("total_earnings", {
+    precision: 12,
+    scale: 2,
+  })
+    .default("0.00")
+    .notNull(),
+  currentBalance: numeric("current_balance", {
+    precision: 12,
+    scale: 2,
+  })
+    .default("0.00")
+    .notNull(),
+  bankName: varchar("bank_name"),
+  accountNumber: varchar("account_number"),
+  accountName: varchar("account_name"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const affiliatesRelations = relations(affiliates, ({ one }) => ({
+  user: one(user, { fields: [affiliates.userId], references: [user.id] }),
 }));
 
 

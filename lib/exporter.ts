@@ -10,6 +10,8 @@ import {
   userRelations,
   wallets,
   walletsRelations,
+  affiliates,
+  affiliatesRelations,
 } from "./schema";
 
 // ... (your table definitions: user, product, payments, wallets) ...
@@ -30,4 +32,6 @@ export const schema = {
   paymentsRelations,
   walletsRelations,
   userRelations,
+  affiliates,
+  affiliatesRelations,
 };
