@@ -6,9 +6,11 @@ import { bonuses } from "../../../../lib/schema";
 
 export interface BonusType {
   id: string;
-  referrerUserId: string;
-  referredUserId: string;
-  paymentId: string;
+  referrerUserId: string | null;
+  referredUserId: string | null;
+  paymentId: string | null;
+  orderId: string | null;
+  type: "referral" | "store";
   bonusAmount: string;
   createdAt: Date;
   status: string | null;

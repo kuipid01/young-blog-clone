@@ -24,7 +24,7 @@ const navItems = [
   { icon: ClipboardList, label: "My Orders", href: "/dashboard/orders" },
   { icon: AlertTriangle, label: "Rules", href: "/dashboard/rules" },
   { icon: TrendingUp, label: "Affiliate", href: "/dashboard/affiliate" },
-  { icon: FeatherIcon, label: "Referral", href: "/dashboard/referral" },
+  // { icon: FeatherIcon, label: "Referral", href: "/dashboard/referral" },
   { icon: FileText, label: "Terms Of Use", href: "/dashboard/terms" },
   // { icon: MessageSquare, label: "Verify SMS", href: "/dashboard/verify-sms" },
   {
@@ -93,8 +93,8 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                 key={item.label}
                 href={item.href}
                 className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${isActive
-                    ? "text-violet-600 bg-violet-50 font-medium"
-                    : "text-gray-600 hover:bg-gray-50"
+                  ? "text-violet-600 bg-violet-50 font-medium"
+                  : "text-gray-600 hover:bg-gray-50"
                   }`}
               >
                 <item.icon className="w-5 h-5" />

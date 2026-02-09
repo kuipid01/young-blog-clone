@@ -23,6 +23,7 @@ export const affiliateStatusEnum = pgEnum("affiliate_status", [
   "rejected",
   "suspended",
 ]);
+export const bonusTypeEnum = pgEnum("bonus_type", ["referral", "store"]);
 export type ProductType = InferSelectModel<typeof product>;
 export type LogType = InferSelectModel<typeof logs>;
 export type BasePaymentType = InferSelectModel<typeof payments>;
@@ -46,6 +47,7 @@ export const user = pgTable("users", {
   email: text("email"),
   password: text("password"),
   referralCode: varchar("referralCode", { length: 50 }).unique().notNull(),
+  isAffiliate: boolean("is_affiliate").default(false).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -73,17 +75,19 @@ export const bonuses = pgTable("bonuses", {
     .$defaultFn(() => createId()),
 
   referrerUserId: varchar("referrer_user_id", { length: 30 })
-    .notNull()
     .references(() => user.id),
 
   referredUserId: varchar("referred_user_id", { length: 30 })
-    .notNull()
     .references(() => user.id),
 
   paymentId: varchar("payment_id", { length: 30 })
-    .notNull()
     .references(() => payments.id),
-  status: text("status"),
+
+  orderId: varchar("order_id", { length: 30 })
+    .references(() => order.id),
+
+  type: bonusTypeEnum("type").default("referral").notNull(),
+  status: text("status").default("pending"),
   bonusAmount: numeric("bonus_amount").notNull(),
 
   createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -226,6 +230,11 @@ export const order = pgTable("orders", {
 
   quantity: integer("quantity").notNull().default(1),
   totalPrice: numeric("total_price", { precision: 12, scale: 2 }).notNull(),
+  
+  totalAmount: numeric("total_amount", { precision: 12, scale: 2 }).notNull().default("0.00"),
+  netAmount: numeric("net_amount", { precision: 12, scale: 2 }).notNull().default("0.00"),
+  referralAmount: numeric("referral_amount", { precision: 12, scale: 2 }).notNull().default("0.00"),
+  referrerId: varchar("referrer_id", { length: 30 }).references(() => user.id),
 
   status: varchar("status").notNull().default("pending_debit"),
 
@@ -245,16 +254,23 @@ export const order = pgTable("orders", {
 // SAVED BANK DETAILS TABLE (Removed)
 
 
-export const orderRelations = relations(order, ({ one }) => ({
+export const orderRelations = relations(order, ({ one, many }) => ({
   user: one(user, {
     fields: [order.userId],
     references: [user.id],
+  }),
+  referrer: one(user, {
+    fields: [order.referrerId],
+    references: [user.id],
+    relationName: "referrer",
   }),
   product: one(product, {
     fields: [order.productId],
     references: [product.id],
   }),
   log: one(logs),
+  bonuses: many(bonuses),
+  affiliateCommissions: many(affiliateCommissions),
 }));
 
 export const paymentsRelations = relations(payments, ({ one }) => ({
@@ -285,6 +301,7 @@ export const userRelations = relations(user, ({ many, one }) => ({
     fields: [user.id],
     references: [affiliates.userId],
   }),
+  affiliateCommissions: many(affiliateCommissions),
 }));
 
 export const affiliates = pgTable("affiliates", {
@@ -300,7 +317,7 @@ export const affiliates = pgTable("affiliates", {
     precision: 5,
     scale: 2,
   })
-    .default("10.00")
+    .default("20.00")
     .notNull(),
   totalEarnings: numeric("total_earnings", {
     precision: 12,
@@ -317,12 +334,65 @@ export const affiliates = pgTable("affiliates", {
   bankName: varchar("bank_name"),
   accountNumber: varchar("account_number"),
   accountName: varchar("account_name"),
+  paymentProof: text("payment_proof"),
+  paymentReference: text("payment_reference"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
+export const affiliateCommissions = pgTable("affiliate_commissions", {
+  id: varchar("id", { length: 30 })
+    .primaryKey()
+    .$defaultFn(() => createId()),
+  orderId: varchar("order_id", { length: 30 })
+    .notNull()
+    .references(() => order.id),
+  affiliateId: varchar("affiliate_id", { length: 30 })
+    .notNull()
+    .references(() => user.id),
+  amount: numeric("amount", { precision: 12, scale: 2 }).notNull(),
+  rate: numeric("rate", { precision: 5, scale: 2 }).notNull(),
+  status: text("status").default("pending").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 export const affiliatesRelations = relations(affiliates, ({ one }) => ({
   user: one(user, { fields: [affiliates.userId], references: [user.id] }),
+}));
+
+export const affiliateCommissionsRelations = relations(
+  affiliateCommissions,
+  ({ one }) => ({
+    order: one(order, {
+      fields: [affiliateCommissions.orderId],
+      references: [order.id],
+    }),
+    affiliate: one(user, {
+      fields: [affiliateCommissions.affiliateId],
+      references: [user.id],
+    }),
+  })
+);
+
+export const bonusesRelations = relations(bonuses, ({ one }) => ({
+  referrer: one(user, {
+    fields: [bonuses.referrerUserId],
+    references: [user.id],
+    relationName: "bonus_referrer",
+  }),
+  referred: one(user, {
+    fields: [bonuses.referredUserId],
+    references: [user.id],
+    relationName: "bonus_referred",
+  }),
+  order: one(order, {
+    fields: [bonuses.orderId],
+    references: [order.id],
+  }),
+  payment: one(payments, {
+    fields: [bonuses.paymentId],
+    references: [payments.id],
+  }),
 }));
 
 
@@ -330,3 +400,36 @@ export const productsRelations = relations(product, ({ many }) => ({
   // Define the 'many' relationship to logs (One Product has Many Logs)
   logs: many(logs),
 }));
+
+
+export const withdrawalStatusEnum = pgEnum("withdrawal_status", [
+  "pending",
+  "approved",
+  "rejected",
+]);
+
+
+export const withdrawals = pgTable("withdrawals", {
+  id: varchar("id", { length: 30 })
+    .primaryKey()
+    .$defaultFn(() => createId()),
+  affiliateId: varchar("affiliate_id", { length: 30 })
+    .notNull()
+    .references(() => affiliates.id),
+  amount: numeric("amount", { precision: 12, scale: 2 }).notNull(),
+  status: withdrawalStatusEnum("status").default("pending").notNull(),
+  bankName: varchar("bank_name"),
+  accountNumber: varchar("account_number"),
+  accountName: varchar("account_name"),
+  adminNote: text("admin_note"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const withdrawalsRelations = relations(withdrawals, ({ one }) => ({
+  affiliate: one(affiliates, {
+    fields: [withdrawals.affiliateId],
+    references: [affiliates.id],
+  }),
+}));
+

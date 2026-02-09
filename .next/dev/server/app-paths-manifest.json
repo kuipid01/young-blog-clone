@@ -5,10 +5,16 @@
   "/api/login/route": "app/api/login/route.js",
   "/api/orders/[userId]/route": "app/api/orders/[userId]/route.js",
   "/api/payments/[userId]/route": "app/api/payments/[userId]/route.js",
+  "/api/products/route": "app/api/products/route.js",
+  "/api/shop-products/route": "app/api/shop-products/route.js",
+  "/api/test/create-order/route": "app/api/test/create-order/route.js",
   "/api/users/[userId]/route": "app/api/users/[userId]/route.js",
   "/api/wallet/[userId]/route": "app/api/wallet/[userId]/route.js",
   "/auth/login/page": "app/auth/login/page.js",
   "/dashboard/affiliate/page": "app/dashboard/affiliate/page.js",
+  "/dashboard/fund-wallet/page": "app/dashboard/fund-wallet/page.js",
+  "/dashboard/orders/page": "app/dashboard/orders/page.js",
   "/dashboard/page": "app/dashboard/page.js",
-  "/page": "app/page.js"
+  "/dashboard/products/page": "app/dashboard/products/page.js",
+  "/dashboard/rules/page": "app/dashboard/rules/page.js"
 }
