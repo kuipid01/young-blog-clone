@@ -54,3 +54,7 @@ Thumbs.db
 
 # --- Misc ---
 *.local
+*.tmp
+*.md
+*.txt
+*.mdx
