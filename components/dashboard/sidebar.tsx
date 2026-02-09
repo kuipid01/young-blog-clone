@@ -13,6 +13,7 @@ import {
   Users,
   X,
   FeatherIcon,
+  TrendingUp,
 } from "lucide-react";
 import { useGetLoggedInUser } from "../../app/hooks/use-get-logged-in-user";
 
@@ -22,7 +23,8 @@ const navItems = [
   { icon: Wallet, label: "Fund Wallet", href: "/dashboard/fund-wallet" },
   { icon: ClipboardList, label: "My Orders", href: "/dashboard/orders" },
   { icon: AlertTriangle, label: "Rules", href: "/dashboard/rules" },
-  { icon: FeatherIcon, label: "Referral", href: "/dashboard/referral" },
+  { icon: TrendingUp, label: "Affiliate", href: "/dashboard/affiliate" },
+  // { icon: FeatherIcon, label: "Referral", href: "/dashboard/referral" },
   { icon: FileText, label: "Terms Of Use", href: "/dashboard/terms" },
   // { icon: MessageSquare, label: "Verify SMS", href: "/dashboard/verify-sms" },
   {
@@ -53,9 +55,8 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
   const { user, loading } = useGetLoggedInUser();
   return (
     <aside
-      className={`fixed top-0 left-0 z-50 h-full w-72 bg-white shadow-lg transform transition-transform duration-300 lg:translate-x-0 ${
-        isOpen ? "translate-x-0" : "-translate-x-full"
-      }`}
+      className={`fixed top-0 left-0 z-50 h-full w-72 bg-white shadow-lg transform transition-transform duration-300 lg:translate-x-0 ${isOpen ? "translate-x-0" : "-translate-x-full"
+        }`}
     >
       <div className="flex flex-col h-full">
         {/* Logo */}
@@ -91,11 +92,10 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
               <Link
                 key={item.label}
                 href={item.href}
-                className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
-                  isActive
-                    ? "text-violet-600 bg-violet-50 font-medium"
-                    : "text-gray-600 hover:bg-gray-50"
-                }`}
+                className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${isActive
+                  ? "text-violet-600 bg-violet-50 font-medium"
+                  : "text-gray-600 hover:bg-gray-50"
+                  }`}
               >
                 <item.icon className="w-5 h-5" />
                 <span>{item.label}</span>

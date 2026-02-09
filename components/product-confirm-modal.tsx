@@ -187,6 +187,54 @@ export function PurchaseConfirmModal({
     }
   };
 
+  const handleTestConfirm = async () => {
+    setLoading(true);
+    const totalCost = Number(product.price) * quantity;
+
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        toast.error("Authentication required.");
+        return;
+      }
+
+      const decoded: { id: string } = jwtDecode(token);
+      const userId = decoded.id;
+
+      // ---- TEST API CALL (NO EXTERNAL API) ----
+      const res = await fetch("/api/test/create-order", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          userId,
+          productId: product.id,
+          price: product.price,
+          quantity: quantity,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        toast.error(data.message || "Test order failed.");
+        return;
+      }
+
+      setOrder(data.order);
+      toast.success("Test order successful!", {
+        description: `Order ID: ${data.order.id}. ${data.commissionGenerated ? 'Affiliate commission generated.' : ''}`,
+      });
+    } catch (error) {
+      console.error(error);
+      toast.error("Test order network error.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleClose = () => {
     setOpen(false);
     // Optional: Refresh the dashboard/product list if stock needs to update immediately
@@ -320,16 +368,26 @@ export function PurchaseConfirmModal({
 
           {/* Confirm/Processing Button - Hide once successful */}
           {!order && (
-            <Button onClick={handleConfirm} disabled={loading}>
-              {loading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />{" "}
-                  Processing...
-                </>
-              ) : (
-                "Confirm Purchase"
-              )}
-            </Button>
+            <div className="flex flex-col sm:flex-row gap-2">
+              {/* <Button
+                variant="outline"
+                onClick={handleTestConfirm}
+                disabled={loading}
+                className="border-dashed border-violet-300 text-violet-600 hover:bg-violet-50"
+              >
+                {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Test Order"}
+              </Button> */}
+              <Button onClick={handleConfirm} disabled={loading}>
+                {loading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />{" "}
+                    Processing...
+                  </>
+                ) : (
+                  "Confirm Purchase"
+                )}
+              </Button>
+            </div>
           )}
         </DialogFooter>
       </DialogContent>

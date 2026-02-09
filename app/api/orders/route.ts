@@ -3,7 +3,7 @@
 import { NextResponse } from "next/server";
 import { eq, sql, and } from "drizzle-orm";
 import { db } from "../../../lib/db";
-import { logs, order, product, wallets } from "../../../lib/schema";
+import { logs, order, product, wallets, referrals, affiliateCommissions } from "../../../lib/schema";
 
 // Mock function for sending mail
 async function sendMailToAdmin(order: any) {
@@ -58,6 +58,26 @@ export async function POST(req: Request) {
 
     console.log(`[STEP 1 SUCCESS] Wallet found - Balance: ${initialBalance}, Total Price: ${totalPrice}`);
 
+    // --- STEP 1.5: Check for Referrer (Affiliate) ---
+    console.log(`[STEP 1.5] Checking for referrer for User: ${userId}`);
+    const referral = await db.query.referrals.findFirst({
+      where: eq(referrals.referredUserId, userId),
+    });
+
+    let currentReferrerId = null;
+    let currentReferralAmount = 0;
+    const commissionRate = 10; // 10% for orders as requested
+
+    if (referral) {
+      currentReferrerId = referral.referrerUserId;
+      currentReferralAmount = totalPrice * (commissionRate / 100);
+      console.log(`[STEP 1.5] Referrer found: ${currentReferrerId}, Commission: ${currentReferralAmount}`);
+    } else {
+      console.log(`[STEP 1.5] No referrer found for this user`);
+    }
+
+    const currentNetAmount = totalPrice - currentReferralAmount;
+
     // --- Validation: Stock and Wallet Balance ---
     if (source === "internal" && stock < quantity) {
       console.log(`[VALIDATION ERROR] Insufficient stock - Available: ${stock}, Required: ${quantity}`);
@@ -108,6 +128,10 @@ export async function POST(req: Request) {
         logId: logToUseId,
         quantity,
         totalPrice: totalPrice.toFixed(2),
+        totalAmount: totalPrice.toFixed(2),
+        netAmount: currentNetAmount.toFixed(2),
+        referralAmount: currentReferralAmount.toFixed(2),
+        referrerId: currentReferrerId,
         status,
         data,
         trans_id,
@@ -175,6 +199,19 @@ export async function POST(req: Request) {
       .set({ status: "completed", updatedAt: sql`now()` })
       .where(eq(order.id, orderId));
     console.log(`[STEP 5 SUCCESS] Order status updated to completed - Order ID: ${orderId}`);
+
+    // --- STEP 5.5: Create Affiliate Commission Record ---
+    if (orderId && currentReferrerId && currentReferralAmount > 0) {
+      console.log(`[STEP 5.5] Creating affiliate commission entry for Order: ${orderId}`);
+      await db.insert(affiliateCommissions).values({
+        orderId,
+        affiliateId: currentReferrerId,
+        amount: currentReferralAmount.toFixed(2),
+        rate: commissionRate.toFixed(2),
+        status: "pending",
+      });
+      console.log(`[STEP 5.5 SUCCESS] Affiliate commission entry created`);
+    }
 
     // --- STEP 6: Side Effects ---
     console.log(`[STEP 6] Sending notification email to admin`);
