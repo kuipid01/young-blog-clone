@@ -264,6 +264,7 @@ export function OrdersContent() {
     setRefundOrder(null);
   };
 
+
   const handleRefundSubmit = async () => {
     if (!refundOrder || !refundReason) {
       toast.error("Please provide a reason for the refund.");
@@ -325,7 +326,7 @@ export function OrdersContent() {
       });
   };
   const logDetails =
-    selectedOrder?.log?.logDetails || selectedOrder?.data.join("") || "";
+    selectedOrder?.log?.logDetails || selectedOrder?.data?.join("") || "";
   // console.log("ORDERS",filteredOrders);
   return (
     <div className="space-y-6">
