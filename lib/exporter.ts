@@ -13,6 +13,9 @@ import {
   affiliates,
   affiliatesRelations,
   referrals,
+  withdrawalMetadata,
+  withdrawals,
+  affiliateCommissions
 } from "./schema";
 
 // ... (your table definitions: user, product, payments, wallets) ...
@@ -35,4 +38,7 @@ referrals,
   userRelations,
   affiliates,
   affiliatesRelations,
+  withdrawalMetadata,
+  withdrawals,
+  affiliateCommissions
 };

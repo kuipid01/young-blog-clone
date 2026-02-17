@@ -3,7 +3,7 @@
 import { NextResponse } from "next/server";
 import { eq, sql, and } from "drizzle-orm";
 import { db } from "../../../lib/db";
-import { logs, order, product, wallets, referrals, affiliateCommissions } from "../../../lib/schema";
+import { logs, order, product, wallets, referrals, affiliateCommissions, affiliates } from "../../../lib/schema";
 
 // Mock function for sending mail
 async function sendMailToAdmin(order: any) {
@@ -64,13 +64,22 @@ export async function POST(req: Request) {
       where: eq(referrals.referredUserId, userId),
     });
 
+  
     let currentReferrerId = null;
     let currentReferralAmount = 0;
-    const commissionRate = 10; // 10% for orders as requested
-
+    let commissionRate = 10; // 10% for orders as requested
+    let affiliate = null
     if (referral) {
       currentReferrerId = referral.referrerUserId;
+        affiliate = await db.query.affiliates.findFirst({
+      where:eq(affiliates.userId,currentReferrerId),
+      
+    })
+    if(affiliate?.status==="active"){
+        commissionRate= Number(affiliate.commissionRate)
       currentReferralAmount = totalPrice * (commissionRate / 100);
+    
+    }
       console.log(`[STEP 1.5] Referrer found: ${currentReferrerId}, Commission: ${currentReferralAmount}`);
     } else {
       console.log(`[STEP 1.5] No referrer found for this user`);
@@ -201,15 +210,23 @@ export async function POST(req: Request) {
     console.log(`[STEP 5 SUCCESS] Order status updated to completed - Order ID: ${orderId}`);
 
     // --- STEP 5.5: Create Affiliate Commission Record ---
-    if (orderId && currentReferrerId && currentReferralAmount > 0) {
+    if (orderId && affiliate && currentReferralAmount > 0) {
       console.log(`[STEP 5.5] Creating affiliate commission entry for Order: ${orderId}`);
       await db.insert(affiliateCommissions).values({
         orderId,
-        affiliateId: currentReferrerId,
+        affiliateId: affiliate.id,
         amount: currentReferralAmount.toFixed(2),
         rate: commissionRate.toFixed(2),
         status: "pending",
       });
+      const previousAffliateBalance = Number(affiliate?.currentBalance) ?? 0
+      const previousAffliateTotalEarnings = Number(affiliate?.totalEarnings) ?? 0
+
+      //update affiliate balance
+      await db.update(affiliates).set({
+        currentBalance: (previousAffliateBalance + currentReferralAmount).toFixed(2),
+        totalEarnings: (previousAffliateTotalEarnings + currentReferralAmount).toFixed(2),
+      }).where(eq(affiliates.userId, currentReferrerId));
       console.log(`[STEP 5.5 SUCCESS] Affiliate commission entry created`);
     }
 

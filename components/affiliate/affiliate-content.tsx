@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useState, useEffect } from "react";
@@ -14,13 +15,17 @@ import {
     ArrowUpRight,
     ShieldCheck,
     BarChart3,
-    Upload
+    Upload,
+    History,
+    ExternalLink,
+    Search
 } from "lucide-react";
 import { useGetLoggedInUser } from "../../app/hooks/use-get-logged-in-user";
 import { useFetch } from "../../app/hooks/use-fetch";
 import { uploadToCloudinary } from "../../app/utils/upload-to-cloundinary";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { WithdrawalModal } from "./withdrawal-modal";
 
 interface AffiliateProfile {
     id: string;
@@ -49,7 +54,27 @@ export function AffiliateContent() {
 
     const profile = statusData?.affiliate;
     // Prioritize the boolean flag isAffiliate from the user object as requested
-    const isAffiliate = user?.isAffiliate === true || (profile && profile.status === "active");
+    const isAffiliate = !!user?.isAffiliate || profile?.status === "active";
+
+    const { data: commissionsData, loading: commissionsLoading, refetch: refetchCommissions } = useFetch<{
+        success: boolean;
+        data: {
+            commissions: any[];
+            summary: {
+                totalEarnings: number;
+                currentBalance: number;
+                availableBalance: number;
+                lockedAmount: number;
+            }
+        }
+    }>(user?.id ? `/api/affiliate/commissions/${user.id}` : "", "affiliate-commissions", {
+        enabled: !!(user?.id && isAffiliate),
+    });
+
+    const handleRefetchAll = () => {
+        refetch();
+        if (isAffiliate) refetchCommissions();
+    };
 
     if (error) {
         return (
@@ -83,14 +108,16 @@ export function AffiliateContent() {
                     <TabButton id="dashboard" label="Dashboard" icon={BarChart3} activeTab={activeTab} onClick={setActiveTab} />
                     <TabButton id="links" label="Affiliate Links" icon={LinkIcon} activeTab={activeTab} onClick={setActiveTab} />
                     <TabButton id="earnings" label="Earnings & Wallet" icon={Wallet} activeTab={activeTab} onClick={setActiveTab} />
-                    <TabButton id="settings" label="Settings" icon={Settings} activeTab={activeTab} onClick={setActiveTab} />
+                    <TabButton id="withdrawals" label="Withdrawals" icon={History} activeTab={activeTab} onClick={setActiveTab} />
+                    {/* <TabButton id="settings" label="Settings" icon={Settings} activeTab={activeTab} onClick={setActiveTab} /> */}
                 </div>
             </div>
 
-            {activeTab === "dashboard" && <OverviewTab profile={profile} user={user} />}
+            {activeTab === "dashboard" && <OverviewTab profile={profile} user={user} commissionsSummary={commissionsData?.data?.summary} />}
             {activeTab === "links" && <LinksTab user={user} />}
-            {activeTab === "earnings" && <EarningsTab profile={profile} />}
-            {activeTab === "settings" && <SettingsTab profile={profile} />}
+            {activeTab === "earnings" && <EarningsTab profile={profile} refetch={handleRefetchAll} commissionsData={commissionsData?.data} loading={commissionsLoading} />}
+            {activeTab === "withdrawals" && <WithdrawalsTab profile={profile} user={user} />}
+            {/* {activeTab === "settings" && <SettingsTab profile={profile} />} */}
         </div>
     );
 }
@@ -115,7 +142,8 @@ function RegistrationView({ user, profile, refetch }: any) {
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState("");
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
-    const [isPending, setIsPending] = useState(profile?.status === "pending_approval" || profile?.status === "pending_payment");
+    const [isPending, setIsPending] = useState(profile?.status === "pending_approval" || profile?.status === "pending_payment" || (profile && profile.status !== "rejected" && profile.status !== "active"));
+    const [hasAgreedToRules, setHasAgreedToRules] = useState(false);
     const router = useRouter();
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -175,7 +203,7 @@ function RegistrationView({ user, profile, refetch }: any) {
                 </p>
                 <div className="p-4 bg-gray-50 rounded-xl text-left space-y-2">
                     <p className="text-xs font-semibold text-gray-400 uppercase">Information Submitted</p>
-                    <p className="text-sm font-medium text-gray-700">Ref: <span className="font-mono">{profile?.paymentReference || "N/A"}</span></p>
+                    <p className="text-sm font-medium text-gray-700">Status: <span className="font-mono capitalize">{profile?.status?.replace('_', ' ') || "Pending"}</span></p>
                 </div>
                 <button
                     onClick={() => refetch()}
@@ -185,6 +213,10 @@ function RegistrationView({ user, profile, refetch }: any) {
                 </button>
             </div>
         );
+    }
+
+    if (!hasAgreedToRules) {
+        return <RulesView onAccept={() => setHasAgreedToRules(true)} />;
     }
 
     return (
@@ -243,9 +275,9 @@ function RegistrationView({ user, profile, refetch }: any) {
 
                             <form onSubmit={handleSubmitProof} className="space-y-6">
                                 <div className="space-y-3">
-                                    <label className="text-sm font-semibold text-gray-700 block">Payment Receipt</label>
+                                    <label htmlFor="receipt-upload" className="text-sm font-semibold text-gray-700 block">Payment Receipt</label>
                                     <div className="relative group">
-                                        <label className="flex flex-col items-center justify-center w-full h-40 bg-gray-50 border-2 border-dashed border-gray-200 rounded-2xl cursor-pointer hover:bg-violet-50 hover:border-violet-200 transition-all">
+                                        <label htmlFor="receipt-upload" className="flex flex-col items-center justify-center w-full h-40 bg-gray-50 border-2 border-dashed border-gray-200 rounded-2xl cursor-pointer hover:bg-violet-50 hover:border-violet-200 transition-all">
                                             <div className="flex flex-col items-center justify-center pt-5 pb-6">
                                                 <Upload className={`w-8 h-8 mb-3 ${selectedFile ? 'text-green-500' : 'text-gray-400'}`} />
                                                 <p className="mb-1 text-sm text-gray-700">
@@ -254,6 +286,7 @@ function RegistrationView({ user, profile, refetch }: any) {
                                                 <p className="text-xs text-gray-500">PNG, JPG or JPEG</p>
                                             </div>
                                             <input
+                                                id="receipt-upload"
                                                 type="file"
                                                 className="hidden"
                                                 accept="image/*"
@@ -298,6 +331,87 @@ function RegistrationView({ user, profile, refetch }: any) {
     );
 }
 
+function RulesView({ onAccept }: { onAccept: () => void }) {
+    const rules = [
+        {
+            title: "Ethical Promotion",
+            desc: "Spamming, misleading claims, or unsolicited emails are strictly prohibited. Promote Jemil Marketplace honestly."
+        },
+        {
+            title: "No Self-Referrals",
+            desc: "Registering yourself under your own affiliate link to gain commission is not allowed and will lead to suspension."
+        },
+        {
+            title: "Accuracy of Information",
+            desc: "You must provide accurate payment information (Bank Name, Account Number) to ensure successful payouts."
+        },
+        {
+            title: "Commission Structure",
+            desc: "Earnings are calculated based on valid sales made through your unique link. Rates are subject to periodic review."
+        },
+        {
+            title: "Payout Schedule",
+            desc: "Standard payouts are processed upon request, provided you have reached the minimum withdrawal threshold."
+        },
+        {
+            title: "Compliance",
+            desc: "Any violation of these terms may result in account termination and forfeiture of unpaid commissions."
+        }
+    ];
+
+    return (
+        <div className="max-w-4xl mx-auto space-y-8 pb-12 animate-in fade-in slide-in-from-bottom-4 duration-700">
+            <div className="text-center space-y-4">
+                <div className="inline-flex p-3 bg-violet-100 rounded-2xl mb-2">
+                    <ShieldCheck className="w-8 h-8 text-violet-600" />
+                </div>
+                <h1 className="text-4xl font-extrabold tracking-tight text-gray-900">Affiliate Rules & Terms</h1>
+                <p className="text-lg text-gray-500 max-w-2xl mx-auto">
+                    Before joining our partner program, please review our guidelines to ensure a fair and profitable partnership.
+                </p>
+            </div>
+
+            <div className="bg-white rounded-3xl shadow-xl border border-gray-100 overflow-hidden">
+                <div className="p-8 md:p-12">
+                    <div className="grid md:grid-cols-2 gap-8">
+                        {rules.map((rule, index) => (
+                            <div key={index} className="space-y-2">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-6 h-6 rounded-full bg-violet-600 text-white flex items-center justify-center text-xs font-bold">
+                                        {index + 1}
+                                    </div>
+                                    <h3 className="font-bold text-gray-900">{rule.title}</h3>
+                                </div>
+                                <p className="text-sm text-gray-500 leading-relaxed pl-9">
+                                    {rule.desc}
+                                </p>
+                            </div>
+                        ))}
+                    </div>
+
+                    <div className="mt-12 pt-8 border-t border-gray-100 flex flex-col items-center gap-6">
+                        <div className="flex items-center gap-2 p-3 bg-amber-50 rounded-xl border border-amber-100">
+                            <AlertCircle className="w-5 h-5 text-amber-600 shrink-0" />
+                            <p className="text-xs text-amber-800 font-medium text-center">
+                                By clicking 'I Understand & Proceed', you agree to abide by all the rules listed above.
+                            </p>
+                        </div>
+
+                        <button
+                            onClick={onAccept}
+                            className="px-12 py-4 bg-violet-600 hover:bg-violet-700 text-white rounded-2xl font-bold shadow-xl shadow-violet-100 transition-all active:scale-[0.98] flex items-center gap-2 group"
+                        >
+                            <span>I Understand & Proceed</span>
+                            <ArrowUpRight className="w-5 h-5 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+
 function FeatureItem({ icon: Icon, title, desc }: any) {
     return (
         <div className="flex gap-4 p-4 bg-white rounded-2xl border border-gray-50 shadow-sm hover:shadow-md hover:border-violet-100 transition-all duration-300">
@@ -313,14 +427,34 @@ function FeatureItem({ icon: Icon, title, desc }: any) {
 }
 
 
-function OverviewTab({ profile, user }: any) {
+function OverviewTab({ profile, user, commissionsSummary }: any) {
     return (
         <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2">
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <StatCard label="Total Earnings" value={`₦${profile.totalEarnings}`} icon={DollarSign} color="green" />
-                <StatCard label="Current Balance" value={`₦${profile.currentBalance}`} icon={Wallet} color="violet" />
-                <StatCard label="Commission Rate" value={`${profile.commissionRate}%`} icon={TrendingUp} color="blue" />
-                <StatCard label="Pending Withdrawals" value="₦0.00" icon={AlertCircle} color="orange" />
+                <StatCard
+                    label="Total Earnings"
+                    value={`₦${commissionsSummary?.totalEarnings || profile.totalEarnings}`}
+                    icon={DollarSign}
+                    color="green"
+                />
+                <StatCard
+                    label="Pending (Locked)"
+                    value={`₦${commissionsSummary?.lockedAmount?.toFixed(2) || "0.00"}`}
+                    icon={AlertCircle}
+                    color="orange"
+                />
+                <StatCard
+                    label="Available Balance"
+                    value={`₦${commissionsSummary?.availableBalance?.toFixed(2) || profile.currentBalance}`}
+                    icon={Wallet}
+                    color="violet"
+                />
+                <StatCard
+                    label="Commission Rate"
+                    value={`${profile.commissionRate}%`}
+                    icon={TrendingUp}
+                    color="blue"
+                />
             </div>
 
             <div className="bg-white rounded-xl border border-gray-100 p-6">
@@ -395,26 +529,85 @@ function LinksTab({ user }: any) {
     )
 }
 
-function EarningsTab({ profile }: any) {
+function EarningsTab({ profile, refetch, commissionsData, loading }: any) {
+    const summary = commissionsData?.summary;
+    const commissions = commissionsData?.commissions || [];
+
     return (
         <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2">
-            <div className="bg-linear-to-r from-gray-900 to-gray-800 rounded-xl p-8 text-white">
-                <div className="flex items-center justify-between">
+            <div className="bg-linear-to-r from-gray-900 to-gray-800 rounded-xl p-8 text-white relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-64 h-64 bg-violet-600/10 rounded-full -mr-32 -mt-32 blur-3xl" />
+                <div className="relative z-10 flex items-center justify-between">
                     <div>
-                        <p className="text-gray-400 mb-1">Available for Withdrawal</p>
-                        <h2 className="text-4xl font-bold">₦{profile.currentBalance}</h2>
+                        <p className="text-gray-400 mb-1 text-sm font-medium">Available for Withdrawal</p>
+                        <h2 className="text-4xl font-bold">₦{summary?.availableBalance?.toFixed(2) || profile.currentBalance}</h2>
+                        {summary?.lockedAmount > 0 && (
+                            <p className="text-xs text-violet-300 mt-2 flex items-center gap-1">
+                                <AlertCircle className="w-3 h-3" />
+                                ₦{summary.lockedAmount.toFixed(2)} is currently locked (12h cooling period)
+                            </p>
+                        )}
                     </div>
-                    <button className="px-6 py-3 bg-white text-gray-900 rounded-lg font-semibold hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
-                        Request Withdrawal
-                    </button>
+                    <WithdrawalModal
+                        currentBalance={Number(summary?.availableBalance || profile.currentBalance)}
+                        affiliateId={profile.id}
+                        onSuccess={() => refetch()}
+                    />
                 </div>
             </div>
 
-            <div className="bg-white rounded-xl border border-gray-100 p-6">
-                <h3 className="font-semibold text-gray-800 mb-4">Transaction History</h3>
-                <div className="text-center py-12 text-gray-400 bg-gray-50 rounded-lg border border-dashed border-gray-200">
-                    No transactions found.
+            <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
+                <div className="p-6 border-b border-gray-50 flex items-center justify-between">
+                    <h3 className="font-semibold text-gray-800">Commission History</h3>
+                    <span className="text-xs text-gray-400">Updates every 12 hours</span>
                 </div>
+
+                {loading ? (
+                    <div className="p-12 flex justify-center">
+                        <div className="w-6 h-6 border-2 border-violet-600 border-t-transparent rounded-full animate-spin"></div>
+                    </div>
+                ) : commissions.length > 0 ? (
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-left">
+                            <thead>
+                                <tr className="bg-gray-50 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                                    <th className="px-6 py-4">Order ID</th>
+                                    <th className="px-6 py-4">Amount</th>
+                                    <th className="px-6 py-4">Status</th>
+                                    <th className="px-6 py-4">Date</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-50">
+                                {commissions.map((c: any) => (
+                                    <tr key={c.id} className="hover:bg-gray-50/50 transition-colors">
+                                        <td className="px-6 py-4 text-sm font-mono text-gray-600">#{c.orderId.slice(-8)}</td>
+                                        <td className="px-6 py-4 text-sm font-bold text-gray-900">₦{Number(c.amount).toFixed(2)}</td>
+                                        <td className="px-6 py-4">
+                                            {c.isLocked ? (
+                                                <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-amber-50 text-amber-600 text-[10px] font-bold">
+                                                    <Settings className="w-3 h-3 animate-spin-slow" />
+                                                    LOCKED
+                                                </span>
+                                            ) : (
+                                                <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-green-50 text-green-600 text-[10px] font-bold">
+                                                    <CheckCircle className="w-3 h-3" />
+                                                    AVAILABLE
+                                                </span>
+                                            )}
+                                        </td>
+                                        <td className="px-6 py-4 text-xs text-gray-500">
+                                            {new Date(c.createdAt).toLocaleDateString()} {new Date(c.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                ) : (
+                    <div className="text-center py-12 text-gray-400 bg-gray-50/50">
+                        No transactions found.
+                    </div>
+                )}
             </div>
         </div>
     )
@@ -445,4 +638,156 @@ function SettingsTab({ profile }: any) {
             </div>
         </div>
     )
+}
+
+function WithdrawalsTab({ profile, user }: any) {
+    const [filterStatus, setFilterStatus] = useState("all");
+    const { data: withdrawalsData, loading, refetch } = useFetch<{
+        success: boolean;
+        data: any[];
+    }>(user?.id ? `/api/affiliate/withdrawals/${user.id}` : "", "affiliate-withdrawals", {
+        enabled: !!user?.id,
+    });
+
+    const withdrawals = withdrawalsData?.data || [];
+    const filteredWithdrawals = filterStatus === "all"
+        ? withdrawals
+        : withdrawals.filter((w: any) => w.status === filterStatus);
+
+    const getStatusColor = (status: string) => {
+        switch (status) {
+            case "approved": return "bg-green-50 text-green-600 border-green-100";
+            case "rejected": return "bg-red-50 text-red-600 border-red-100";
+            case "processing": return "bg-blue-50 text-blue-600 border-blue-100";
+            case "pending": return "bg-amber-50 text-amber-600 border-amber-100";
+            default: return "bg-gray-50 text-gray-600 border-gray-100";
+        }
+    };
+
+    return (
+        <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div>
+                    <h2 className="text-xl font-bold text-gray-900">Withdrawal History</h2>
+                    <p className="text-sm text-gray-500">Track and manage your payout requests</p>
+                </div>
+
+                <div className="flex items-center gap-2 bg-white p-1 rounded-xl border border-gray-100 shadow-sm overflow-x-auto no-scrollbar">
+                    {["all", "pending", "processing", "approved", "rejected"].map((status) => (
+                        <button
+                            key={status}
+                            onClick={() => setFilterStatus(status)}
+                            className={`px-4 py-1.5 rounded-lg text-xs font-semibold capitalize transition-all whitespace-nowrap ${filterStatus === status
+                                    ? "bg-violet-600 text-white shadow-sm"
+                                    : "text-gray-500 hover:bg-gray-50"
+                                }`}
+                        >
+                            {status}
+                        </button>
+                    ))}
+                </div>
+            </div>
+
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden min-h-[400px]">
+                {loading ? (
+                    <div className="flex flex-col items-center justify-center p-24 space-y-4">
+                        <div className="w-8 h-8 border-3 border-violet-600 border-t-transparent rounded-full animate-spin"></div>
+                        <p className="text-sm text-gray-400">Loading withdrawals...</p>
+                    </div>
+                ) : filteredWithdrawals.length > 0 ? (
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-left">
+                            <thead>
+                                <tr className="bg-gray-50/50 text-xs font-bold text-gray-400 uppercase tracking-wider">
+                                    <th className="px-6 py-4">Reference</th>
+                                    <th className="px-6 py-4">Amount</th>
+                                    <th className="px-6 py-4">Bank Details</th>
+                                    <th className="px-6 py-4">Status</th>
+                                    <th className="px-6 py-4">Date</th>
+                                    <th className="px-6 py-4 text-right">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-50">
+                                {filteredWithdrawals.map((w: any) => (
+                                    <tr key={w.id} className="hover:bg-gray-50/30 transition-colors group">
+                                        <td className="px-6 py-5">
+                                            <div className="flex flex-col">
+                                                <span className="text-sm font-mono text-gray-600 font-medium">#{w.id.slice(-8).toUpperCase()}</span>
+                                                <span className="text-[10px] text-gray-400 capitalize">{w.type} payout</span>
+                                            </div>
+                                        </td>
+                                        <td className="px-6 py-5">
+                                            <span className="text-base font-bold text-gray-900">₦{Number(w.amount).toLocaleString()}</span>
+                                        </td>
+                                        <td className="px-6 py-5">
+                                            <div className="flex flex-col">
+                                                <span className="text-sm text-gray-700 font-medium">{w.bankName}</span>
+                                                <span className="text-xs text-gray-400">{w.accountNumber}</span>
+                                            </div>
+                                        </td>
+                                        <td className="px-6 py-5">
+                                            <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full border text-[10px] font-bold uppercase tracking-wider ${getStatusColor(w.status)}`}>
+                                                <div className={`w-1.5 h-1.5 rounded-full ${w.status === 'approved' ? 'bg-green-500' :
+                                                        w.status === 'rejected' ? 'bg-red-500' :
+                                                            w.status === 'processing' ? 'bg-blue-500' : 'bg-amber-500'
+                                                    }`} />
+                                                {w.status}
+                                            </span>
+                                        </td>
+                                        <td className="px-6 py-5">
+                                            <span className="text-xs text-gray-500">
+                                                {new Date(w.createdAt).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}
+                                            </span>
+                                        </td>
+                                        <td className="px-6 py-5 text-right">
+                                            {w.adminProof ? (
+                                                <Link
+                                                    href={w.adminProof}
+                                                    target="_blank"
+                                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-violet-50 text-violet-600 rounded-lg text-xs font-bold hover:bg-violet-100 transition-all border border-violet-100 shadow-xs"
+                                                >
+                                                    <ExternalLink className="w-3.5 h-3.5" />
+                                                    View Proof
+                                                </Link>
+                                            ) : (
+                                                <span className="text-xs text-gray-300 italic">No proof yet</span>
+                                            )}
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                ) : (
+                    <div className="flex flex-col items-center justify-center p-24 text-center space-y-4">
+                        <div className="w-16 h-16 bg-gray-50 rounded-2xl flex items-center justify-center border border-gray-100 mb-2">
+                            <History className="w-8 h-8 text-gray-300" />
+                        </div>
+                        <div>
+                            <p className="text-gray-900 font-bold">No withdrawals found</p>
+                            <p className="text-sm text-gray-400 mt-1">
+                                {filterStatus === 'all'
+                                    ? "You haven't made any withdrawal requests yet."
+                                    : `You don't have any ${filterStatus} withdrawal requests.`}
+                            </p>
+                        </div>
+                    </div>
+                )}
+            </div>
+
+            {/* Withdrawals Tip */}
+            <div className="p-4 bg-violet-50 rounded-2xl border border-violet-100 flex gap-4">
+                <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shrink-0 shadow-sm">
+                    <ShieldCheck className="w-5 h-5 text-violet-600" />
+                </div>
+                <div>
+                    <h4 className="text-sm font-bold text-violet-900">Security & Processing</h4>
+                    <p className="text-xs text-violet-700 leading-relaxed mt-1">
+                        Manual withdrawals are reviewed by our team and processed within 24-48 hours.
+                        Always ensure your bank details are correct to avoid delays or rejections.
+                    </p>
+                </div>
+            </div>
+        </div>
+    );
 }

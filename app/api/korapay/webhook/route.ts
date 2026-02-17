@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import * as crypto from "crypto";
 import { db } from "@/lib/db";
-import { payments, wallets } from "@/lib/schema";
+import { payments, wallets, withdrawals, withdrawalMetadata, affiliates } from "@/lib/schema";
 import { eq, sql } from "drizzle-orm";
 
 const KORAPAY_SECRET_KEY = process.env.KORAPAY_SECRET_KEY;
@@ -158,6 +158,69 @@ export async function POST(req: NextRequest) {
                     { status }
                 );
             }
+        } else if (event === "transfer.success") {
+            const { reference, amount, status } = data;
+            console.info(`[KORA][${requestId}] transfer.success received`, { reference, amount, status });
+
+            const meta = await db.query.withdrawalMetadata.findFirst({
+                where: eq(withdrawalMetadata.reference, reference),
+            });
+
+            if (!meta) {
+                console.warn(`[KORA][${requestId}] ⚠️ No withdrawal metadata found for reference ${reference}`);
+            } else {
+                await db.update(withdrawals)
+                    .set({ status: "approved" })
+                    .where(eq(withdrawals.id, meta.withdrawalId));
+                
+                 await db.update(withdrawalMetadata)
+                    .set({ status: status, metadata: data })
+                    .where(eq(withdrawalMetadata.reference, reference));
+                
+                console.info(`[KORA][${requestId}] ✅ Withdrawal confirmed`);
+            }
+
+        } else if (event === "transfer.failed") {
+            const { reference, amount, status } = data;
+             console.info(`[KORA][${requestId}] transfer.failed received`, { reference, amount, status });
+
+            const meta = await db.query.withdrawalMetadata.findFirst({
+                where: eq(withdrawalMetadata.reference, reference),
+                with: {
+                    withdrawal: true
+                }
+            });
+            
+             if (!meta) {
+                console.warn(`[KORA][${requestId}] ⚠️ No withdrawal metadata found for reference ${reference}`);
+            } else {
+                 await db.transaction(async (tx) => {
+                    // 1. Update withdrawal status to rejected
+                    await tx.update(withdrawals)
+                        .set({ status: "rejected" })
+                        .where(eq(withdrawals.id, meta.withdrawalId));
+
+                    // 2. Refund affiliate balance
+                    // We need to fetch the specific withdrawal to know the exact amount requested (which might differ from 'amount' in webhook if fees involved, but usually amount matches)
+                    // For safety, let's use the amount from the withdrawal record if possible, or the one from webhook. 
+                    // However, we deducted 'amount' in the withdrawal route. The webhook 'amount' should be the same.
+                    // Let's rely on the metadata's withdrawal info if available.
+                    
+                    const refundAmount = meta.withdrawal ? meta.withdrawal.amount : amount;
+
+                    await tx.update(affiliates)
+                        .set({ currentBalance: sql`${affiliates.currentBalance} + ${refundAmount}` })
+                        .where(eq(affiliates.id, meta.withdrawal!.affiliateId));
+                    
+                    // 3. Update metadata
+                    await tx.update(withdrawalMetadata)
+                        .set({ status: status, metadata: data })
+                        .where(eq(withdrawalMetadata.reference, reference));
+                 });
+
+                 console.info(`[KORA][${requestId}] ❌ Withdrawal failed. Balance refunded.`);
+            }
+
         } else {
             console.info(
                 `[KORA][${requestId}] Ignored event type: ${event}`

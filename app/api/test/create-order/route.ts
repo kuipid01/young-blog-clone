@@ -57,13 +57,20 @@ export async function POST(req: Request) {
 
     // 3. Create Commission Record if applicable
     if (referrerId && referralAmount > 0) {
-      await db.insert(affiliateCommissions).values({
-        orderId: newOrder.id,
-        affiliateId: referrerId,
-        amount: referralAmount.toFixed(2),
-        rate: commissionRate.toFixed(2),
-        status: "pending",
+      // Find the affiliate again or ensure we have the ID
+      const affiliateProfile = await db.query.affiliates.findFirst({
+        where: eq(affiliates.userId, referrerId),
       });
+
+      if (affiliateProfile) {
+        await db.insert(affiliateCommissions).values({
+          orderId: newOrder.id,
+          affiliateId: affiliateProfile.id,
+          amount: referralAmount.toFixed(2),
+          rate: commissionRate.toFixed(2),
+          status: "pending",
+        });
+      }
     }
 
     return NextResponse.json({

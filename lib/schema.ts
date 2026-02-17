@@ -344,12 +344,15 @@ export const affiliateCommissions = pgTable("affiliate_commissions", {
   id: varchar("id", { length: 30 })
     .primaryKey()
     .$defaultFn(() => createId()),
+
   orderId: varchar("order_id", { length: 30 })
     .notNull()
     .references(() => order.id),
+
   affiliateId: varchar("affiliate_id", { length: 30 })
     .notNull()
-    .references(() => user.id),
+    .references(() => affiliates.id),
+
   amount: numeric("amount", { precision: 12, scale: 2 }).notNull(),
   rate: numeric("rate", { precision: 5, scale: 2 }).notNull(),
   status: text("status").default("pending").notNull(),
@@ -367,13 +370,12 @@ export const affiliateCommissionsRelations = relations(
       fields: [affiliateCommissions.orderId],
       references: [order.id],
     }),
-    affiliate: one(user, {
+    affiliate: one(affiliates, {  
       fields: [affiliateCommissions.affiliateId],
-      references: [user.id],
+      references: [affiliates.id],
     }),
   })
 );
-
 export const bonusesRelations = relations(bonuses, ({ one }) => ({
   referrer: one(user, {
     fields: [bonuses.referrerUserId],
@@ -406,8 +408,10 @@ export const withdrawalStatusEnum = pgEnum("withdrawal_status", [
   "pending",
   "approved",
   "rejected",
+  "processing",
 ]);
 
+export const withdrawalTypeEnum = pgEnum("withdrawal_type", ["automatic", "manual"]);
 
 export const withdrawals = pgTable("withdrawals", {
   id: varchar("id", { length: 30 })
@@ -418,18 +422,47 @@ export const withdrawals = pgTable("withdrawals", {
     .references(() => affiliates.id),
   amount: numeric("amount", { precision: 12, scale: 2 }).notNull(),
   status: withdrawalStatusEnum("status").default("pending").notNull(),
+  type: withdrawalTypeEnum("type").default("automatic").notNull(),
   bankName: varchar("bank_name"),
   accountNumber: varchar("account_number"),
   accountName: varchar("account_name"),
   adminNote: text("admin_note"),
+  adminProof: text("admin_proof"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
-export const withdrawalsRelations = relations(withdrawals, ({ one }) => ({
+export const withdrawalMetadata = pgTable("withdrawal_metadata", {
+  id: varchar("id", { length: 30 })
+    .primaryKey()
+    .$defaultFn(() => createId()),
+  withdrawalId: varchar("withdrawal_id", { length: 30 })
+    .notNull()
+    .references(() => withdrawals.id),
+  reference: varchar("reference").notNull().unique(),
+  fee: numeric("fee", { precision: 12, scale: 2 }),
+  currency: varchar("currency").default("NGN"),
+  status: varchar("status").default("processing"),
+  metadata: json("metadata"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const withdrawalMetadataRelations = relations(
+  withdrawalMetadata,
+  ({ one }) => ({
+    withdrawal: one(withdrawals, {
+      fields: [withdrawalMetadata.withdrawalId],
+      references: [withdrawals.id],
+    }),
+  })
+);
+
+export const withdrawalsRelations = relations(withdrawals, ({ one, many }) => ({
   affiliate: one(affiliates, {
     fields: [withdrawals.affiliateId],
     references: [affiliates.id],
   }),
+  metadata: many(withdrawalMetadata),
 }));
 
