@@ -642,12 +642,17 @@ function SettingsTab({ profile }: any) {
 
 function WithdrawalsTab({ profile, user }: any) {
     const [filterStatus, setFilterStatus] = useState("all");
-    const { data: withdrawalsData, loading, refetch } = useFetch<{
+    const { data: withdrawalsData, loading } = useFetch<{
         success: boolean;
         data: any[];
-    }>(user?.id ? `/api/affiliate/withdrawals/${user.id}` : "", "affiliate-withdrawals", {
-        enabled: !!user?.id,
-    });
+    }>(
+        user?.id ? `/api/affiliate/withdrawals/${user.id}` : "",
+        `affiliate-withdrawals-${user?.id}`,
+        {
+            enabled: !!user?.id,
+            cache: false // Ensure fresh data when tab is opened
+        }
+    );
 
     const withdrawals = withdrawalsData?.data || [];
     const filteredWithdrawals = filterStatus === "all"
@@ -678,8 +683,8 @@ function WithdrawalsTab({ profile, user }: any) {
                             key={status}
                             onClick={() => setFilterStatus(status)}
                             className={`px-4 py-1.5 rounded-lg text-xs font-semibold capitalize transition-all whitespace-nowrap ${filterStatus === status
-                                    ? "bg-violet-600 text-white shadow-sm"
-                                    : "text-gray-500 hover:bg-gray-50"
+                                ? "bg-violet-600 text-white shadow-sm"
+                                : "text-gray-500 hover:bg-gray-50"
                                 }`}
                         >
                             {status}
@@ -728,8 +733,8 @@ function WithdrawalsTab({ profile, user }: any) {
                                         <td className="px-6 py-5">
                                             <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full border text-[10px] font-bold uppercase tracking-wider ${getStatusColor(w.status)}`}>
                                                 <div className={`w-1.5 h-1.5 rounded-full ${w.status === 'approved' ? 'bg-green-500' :
-                                                        w.status === 'rejected' ? 'bg-red-500' :
-                                                            w.status === 'processing' ? 'bg-blue-500' : 'bg-amber-500'
+                                                    w.status === 'rejected' ? 'bg-red-500' :
+                                                        w.status === 'processing' ? 'bg-blue-500' : 'bg-amber-500'
                                                     }`} />
                                                 {w.status}
                                             </span>

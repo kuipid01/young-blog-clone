@@ -210,7 +210,7 @@ export async function POST(req: Request) {
     console.log(`[STEP 5 SUCCESS] Order status updated to completed - Order ID: ${orderId}`);
 
     // --- STEP 5.5: Create Affiliate Commission Record ---
-    if (orderId && affiliate && currentReferralAmount > 0) {
+    if (orderId && affiliate && currentReferrerId && currentReferralAmount > 0) {
       console.log(`[STEP 5.5] Creating affiliate commission entry for Order: ${orderId}`);
       await db.insert(affiliateCommissions).values({
         orderId,
