@@ -20,9 +20,11 @@ import {
 } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
-import { useEffect } from "react";
+import { Suspense, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { toast } from "sonner";
 
-export function RegisterForm() {
+function RegisterFormContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const referralFromUrl = searchParams.get("ref");
@@ -421,4 +423,17 @@ export function RegisterForm() {
       </p>
     </div>
   );
+}
+
+export function RegisterForm() {
+  return (
+    <Suspense fallback={
+      <div className="bg-white rounded-2xl shadow-2xl p-8 flex flex-col items-center justify-center min-h-[400px]">
+        <div className="w-10 h-10 border-4 border-[#6C5CE7] border-t-transparent rounded-full animate-spin mb-4" />
+        <p className="text-muted-foreground animate-pulse">Loading registration form...</p>
+      </div>
+    }>
+      <RegisterFormContent />
+    </Suspense>
+  )
 }
