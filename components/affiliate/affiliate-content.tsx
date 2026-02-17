@@ -144,7 +144,14 @@ function RegistrationView({ user, profile, refetch }: any) {
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
     const [isPending, setIsPending] = useState(profile?.status === "pending_approval" || profile?.status === "pending_payment" || (profile && profile.status !== "rejected" && profile.status !== "active"));
     const [hasAgreedToRules, setHasAgreedToRules] = useState(false);
+    const [copied, setCopied] = useState(false);
     const router = useRouter();
+
+    const handleCopyAccount = () => {
+        navigator.clipboard.writeText("9122041519");
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+    };
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files.length > 0) {
@@ -245,8 +252,38 @@ function RegistrationView({ user, profile, refetch }: any) {
                         <h3 className="font-bold text-violet-900 mb-2">Registration Instructions</h3>
                         <ul className="space-y-3 text-sm text-violet-800">
                             <li className="flex gap-2">
-                                <span className="font-bold">1.</span>
-                                <span>Pay the ₦1,000 registration fee to Jemil Marketplace Account.</span>
+                                <span className="font-bold text-violet-600">1.</span>
+                                <div className="space-y-3 flex-1">
+                                    <span>Pay the ₦1,000 registration fee to the account below:</span>
+                                    <div className="bg-white/80 backdrop-blur-sm rounded-xl border border-violet-200 p-4 shadow-sm relative group">
+                                        <div className="flex justify-between items-start mb-3">
+                                            <div>
+                                                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Bank Name</p>
+                                                <p className="text-sm font-bold text-gray-900">Moniepoint</p>
+                                            </div>
+                                            <div className="text-right">
+                                                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Account Name</p>
+                                                <p className="text-sm font-bold text-gray-900">DANJUMA JOHN</p>
+                                            </div>
+                                        </div>
+                                        <div className="pt-3 border-t border-violet-50 flex items-center justify-between">
+                                            <div>
+                                                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Account Number</p>
+                                                <p className="text-xl font-mono font-black text-violet-600 tracking-wider">9122041519</p>
+                                            </div>
+                                            <button
+                                                onClick={handleCopyAccount}
+                                                className={`p-2.5 rounded-xl transition-all flex items-center gap-2 ${copied
+                                                    ? "bg-green-500 text-white"
+                                                    : "bg-violet-600 text-white hover:bg-violet-700 active:scale-95"
+                                                    }`}
+                                            >
+                                                {copied ? <CheckCircle className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                                                <span className="text-xs font-bold">{copied ? "Copied" : "Copy"}</span>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
                             </li>
                             <li className="flex gap-2">
                                 <span className="font-bold">2.</span>
