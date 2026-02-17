@@ -489,7 +489,7 @@ function StatCard({ label, value, icon: Icon, color }: any) {
 
 function LinksTab({ user }: any) {
     const [copied, setCopied] = useState(false);
-    const referralLink = `https://jemilmarketplace.com/register?ref=${user?.referralCode}`;
+    const referralLink = `https://jemilmarketplace.com/auth/register?ref=${user?.referralCode}`;
 
     const copyToClipboard = () => {
         navigator.clipboard.writeText(referralLink);
