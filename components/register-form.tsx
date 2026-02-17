@@ -18,11 +18,15 @@ import {
   Code2,
   Gift,
 } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
+import { useEffect } from "react";
 
 export function RegisterForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const referralFromUrl = searchParams.get("ref");
+
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false); // NEW
   const [isLoading, setIsLoading] = useState(false);
@@ -31,8 +35,14 @@ export function RegisterForm() {
     email: "",
     password: "",
     confirmPassword: "", // NEW
-    referralCode: "",
+    referralCode: referralFromUrl || "",
   });
+
+  useEffect(() => {
+    if (referralFromUrl) {
+      setFormData((prev) => ({ ...prev, referralCode: referralFromUrl }));
+    }
+  }, [referralFromUrl]);
   const [focusedField, setFocusedField] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -118,11 +128,10 @@ export function RegisterForm() {
           </Label>
           <div className="relative">
             <div
-              className={`absolute left-3 top-1/2 -translate-y-1/2 transition-colors duration-200 ${
-                focusedField === "name"
+              className={`absolute left-3 top-1/2 -translate-y-1/2 transition-colors duration-200 ${focusedField === "name"
                   ? "text-[#6C5CE7]"
                   : "text-muted-foreground"
-              }`}
+                }`}
             >
               <User className="w-5 h-5" />
             </div>
@@ -160,11 +169,10 @@ export function RegisterForm() {
           </Label>
           <div className="relative">
             <div
-              className={`absolute left-3 top-1/2 -translate-y-1/2 transition-colors duration-200 ${
-                focusedField === "email"
+              className={`absolute left-3 top-1/2 -translate-y-1/2 transition-colors duration-200 ${focusedField === "email"
                   ? "text-[#6C5CE7]"
                   : "text-muted-foreground"
-              }`}
+                }`}
             >
               <Mail className="w-5 h-5" />
             </div>
@@ -202,11 +210,10 @@ export function RegisterForm() {
           </Label>
           <div className="relative">
             <div
-              className={`absolute left-3 top-1/2 -translate-y-1/2 transition-colors duration-200 ${
-                focusedField === "password"
+              className={`absolute left-3 top-1/2 -translate-y-1/2 transition-colors duration-200 ${focusedField === "password"
                   ? "text-[#6C5CE7]"
                   : "text-muted-foreground"
-              }`}
+                }`}
             >
               <Lock className="w-5 h-5" />
             </div>
@@ -246,24 +253,22 @@ export function RegisterForm() {
                 {[1, 2, 3].map((level) => (
                   <div
                     key={level}
-                    className={`h-1.5 flex-1 rounded-full transition-all duration-300 ${
-                      passwordStrength() >= level
+                    className={`h-1.5 flex-1 rounded-full transition-all duration-300 ${passwordStrength() >= level
                         ? strengthColors[passwordStrength()]
                         : "bg-muted"
-                    }`}
+                      }`}
                   />
                 ))}
               </div>
               <p className="text-xs text-muted-foreground">
                 Password strength:{" "}
                 <span
-                  className={`font-medium ${
-                    passwordStrength() === 3
+                  className={`font-medium ${passwordStrength() === 3
                       ? "text-green-500"
                       : passwordStrength() === 2
-                      ? "text-yellow-500"
-                      : "text-red-500"
-                  }`}
+                        ? "text-yellow-500"
+                        : "text-red-500"
+                    }`}
                 >
                   {strengthLabels[passwordStrength()]}
                 </span>
@@ -281,11 +286,10 @@ export function RegisterForm() {
           </Label>
           <div className="relative">
             <div
-              className={`absolute left-3 top-1/2 -translate-y-1/2 transition-colors duration-200 ${
-                focusedField === "confirmPassword"
+              className={`absolute left-3 top-1/2 -translate-y-1/2 transition-colors duration-200 ${focusedField === "confirmPassword"
                   ? "text-[#6C5CE7]"
                   : "text-muted-foreground"
-              }`}
+                }`}
             >
               <Lock className="w-5 h-5" />
             </div>
@@ -348,11 +352,10 @@ export function RegisterForm() {
           </Label>
           <div className="relative">
             <div
-              className={`absolute left-3 top-1/2 -translate-y-1/2 transition-colors duration-200 ${
-                focusedField === "referalCode"
+              className={`absolute left-3 top-1/2 -translate-y-1/2 transition-colors duration-200 ${focusedField === "referalCode"
                   ? "text-[#6C5CE7]"
                   : "text-muted-foreground"
-              }`}
+                }`}
             >
               <Gift className="w-5 h-5" />
             </div>
@@ -371,7 +374,7 @@ export function RegisterForm() {
               onFocus={() => setFocusedField("referralCode")}
               onBlur={() => setFocusedField(null)}
               className="pl-11 pr-11 h-12 border-2 border-border bg-muted/30 rounded-xl transition-all duration-200 focus:border-[#6C5CE7] focus:bg-white focus:ring-2 focus:ring-[#6C5CE7]/20"
-              
+
             />
           </div>
         </div>
