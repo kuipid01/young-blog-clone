@@ -642,19 +642,30 @@ function SettingsTab({ profile }: any) {
 
 function WithdrawalsTab({ profile, user }: any) {
     const [filterStatus, setFilterStatus] = useState("all");
-    const { data: withdrawalsData, loading } = useFetch<{
-        success: boolean;
-        data: any[];
-    }>(
-        user?.id ? `/api/affiliate/withdrawals/${user.id}` : "",
-        `affiliate-withdrawals-${user?.id}`,
-        {
-            enabled: !!user?.id,
-            cache: false // Ensure fresh data when tab is opened
-        }
-    );
+    const [withdrawals, setWithdrawals] = useState<any[]>([]);
+    const [loading, setLoading] = useState(false);
 
-    const withdrawals = withdrawalsData?.data || [];
+    useEffect(() => {
+        const fetchWithdrawals = async () => {
+            if (!user?.id) return;
+            setLoading(true);
+            try {
+                console.log(`[WITHDRAWALS] Fetching for user: ${user.id}`);
+                const res = await fetch(`/api/affiliate/withdrawals/${user.id}`);
+                const data = await res.json();
+                console.log("[WITHDRAWALS] Data received:", data);
+                if (data.success) {
+                    setWithdrawals(data.data || []);
+                }
+            } catch (error) {
+                console.error("[WITHDRAWALS] Fetch error:", error);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchWithdrawals();
+    }, [user?.id]);
     const filteredWithdrawals = filterStatus === "all"
         ? withdrawals
         : withdrawals.filter((w: any) => w.status === filterStatus);
