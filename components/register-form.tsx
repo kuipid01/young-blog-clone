@@ -129,8 +129,8 @@ export function RegisterForm() {
           <div className="relative">
             <div
               className={`absolute left-3 top-1/2 -translate-y-1/2 transition-colors duration-200 ${focusedField === "name"
-                  ? "text-[#6C5CE7]"
-                  : "text-muted-foreground"
+                ? "text-[#6C5CE7]"
+                : "text-muted-foreground"
                 }`}
             >
               <User className="w-5 h-5" />
@@ -170,8 +170,8 @@ export function RegisterForm() {
           <div className="relative">
             <div
               className={`absolute left-3 top-1/2 -translate-y-1/2 transition-colors duration-200 ${focusedField === "email"
-                  ? "text-[#6C5CE7]"
-                  : "text-muted-foreground"
+                ? "text-[#6C5CE7]"
+                : "text-muted-foreground"
                 }`}
             >
               <Mail className="w-5 h-5" />
@@ -211,8 +211,8 @@ export function RegisterForm() {
           <div className="relative">
             <div
               className={`absolute left-3 top-1/2 -translate-y-1/2 transition-colors duration-200 ${focusedField === "password"
-                  ? "text-[#6C5CE7]"
-                  : "text-muted-foreground"
+                ? "text-[#6C5CE7]"
+                : "text-muted-foreground"
                 }`}
             >
               <Lock className="w-5 h-5" />
@@ -254,8 +254,8 @@ export function RegisterForm() {
                   <div
                     key={level}
                     className={`h-1.5 flex-1 rounded-full transition-all duration-300 ${passwordStrength() >= level
-                        ? strengthColors[passwordStrength()]
-                        : "bg-muted"
+                      ? strengthColors[passwordStrength()]
+                      : "bg-muted"
                       }`}
                   />
                 ))}
@@ -264,10 +264,10 @@ export function RegisterForm() {
                 Password strength:{" "}
                 <span
                   className={`font-medium ${passwordStrength() === 3
-                      ? "text-green-500"
-                      : passwordStrength() === 2
-                        ? "text-yellow-500"
-                        : "text-red-500"
+                    ? "text-green-500"
+                    : passwordStrength() === 2
+                      ? "text-yellow-500"
+                      : "text-red-500"
                     }`}
                 >
                   {strengthLabels[passwordStrength()]}
@@ -287,8 +287,8 @@ export function RegisterForm() {
           <div className="relative">
             <div
               className={`absolute left-3 top-1/2 -translate-y-1/2 transition-colors duration-200 ${focusedField === "confirmPassword"
-                  ? "text-[#6C5CE7]"
-                  : "text-muted-foreground"
+                ? "text-[#6C5CE7]"
+                : "text-muted-foreground"
                 }`}
             >
               <Lock className="w-5 h-5" />
@@ -353,8 +353,8 @@ export function RegisterForm() {
           <div className="relative">
             <div
               className={`absolute left-3 top-1/2 -translate-y-1/2 transition-colors duration-200 ${focusedField === "referalCode"
-                  ? "text-[#6C5CE7]"
-                  : "text-muted-foreground"
+                ? "text-[#6C5CE7]"
+                : "text-muted-foreground"
                 }`}
             >
               <Gift className="w-5 h-5" />
@@ -373,8 +373,8 @@ export function RegisterForm() {
               }
               onFocus={() => setFocusedField("referralCode")}
               onBlur={() => setFocusedField(null)}
-              className="pl-11 pr-11 h-12 border-2 border-border bg-muted/30 rounded-xl transition-all duration-200 focus:border-[#6C5CE7] focus:bg-white focus:ring-2 focus:ring-[#6C5CE7]/20"
-
+              className="pl-11 pr-11 h-12 border-2 border-border bg-muted/30 rounded-xl transition-all duration-200 focus:border-[#6C5CE7] focus:bg-white focus:ring-2 focus:ring-[#6C5CE7]/20 disabled:opacity-50 disabled:cursor-not-allowed"
+              readOnly={!!referralFromUrl}
             />
           </div>
         </div>
