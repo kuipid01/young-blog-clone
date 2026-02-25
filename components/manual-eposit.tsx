@@ -221,7 +221,7 @@ export function ManualDepositContent() {
               className="justify-center text-green-600"
             />
             <p className="text-center text-red-700 text-xs font-semibold pt-1">
-              DO NOT UPLOAD PAYMENT 2 TIMES else your account will be BAN &
+              DO NOT UPLOAD PAYyMENT 2 TIMES else your account will be BAN &
               DEACTIVATED.
             </p>
           </div>
