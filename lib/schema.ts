@@ -245,6 +245,11 @@ export const order = pgTable("orders", {
   refundAdminNote: text("refund_admin_note"),
   refundBankName: varchar("refund_bank_name"),
 
+  // Per-log partial refund fields
+  refundItems: json("refund_items"),      // [{logContent: string, proofUrl: string}]
+  refundFaultyCount: integer("refund_faulty_count"),
+  refundAmount: numeric("refund_amount", { precision: 12, scale: 2 }),
+
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
@@ -466,3 +471,26 @@ export const withdrawalsRelations = relations(withdrawals, ({ one, many }) => ({
   metadata: many(withdrawalMetadata),
 }));
 
+export const passwordResetTokens = pgTable("password_reset_tokens", {
+  id: varchar("id", { length: 30 })
+    .notNull()
+    .primaryKey()
+    .$defaultFn(() => createId()),
+  userId: varchar("user_id", { length: 30 })
+    .notNull()
+    .references(() => user.id),
+  token: text("token").notNull().unique(),
+  expiresAt: timestamp("expires_at").notNull(),
+  used: boolean("used").default(false).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const passwordResetTokensRelations = relations(
+  passwordResetTokens,
+  ({ one }) => ({
+    user: one(user, {
+      fields: [passwordResetTokens.userId],
+      references: [user.id],
+    }),
+  })
+);
