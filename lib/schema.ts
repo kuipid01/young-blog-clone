@@ -244,7 +244,7 @@ export const order = pgTable("orders", {
   refundAccountNumber: varchar("refund_account_number"),
   refundAdminNote: text("refund_admin_note"),
   refundBankName: varchar("refund_bank_name"),
-
+  refundedLogIndices: json("refunded_log_indices"), // [number]
   // Per-log partial refund fields
   refundItems: json("refund_items"),      // [{logContent: string, proofUrl: string}]
   refundFaultyCount: integer("refund_faulty_count"),
