@@ -115,43 +115,63 @@ export function PurchaseConfirmModal({
         router.push("/auth/login");
         return;
       }
-      // Create FormData
-      const formData = new FormData();
-      formData.append("action", "buyProduct");
-      formData.append("id", product.id);
-      formData.append("amount", quantity.toString());
-      //call external api then use data returned to create order with log id
-      const externalRes = await fetch("/api/shop-products/buy", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-        body: formData, // Send FormData directly
-      });
-      if (!externalRes.ok) {
-        const errorData = await externalRes.json();
-        toast.error(errorData.message || "Purchase failed at external API.");
-        return;
+      let finalOrderData: any;
+
+      if (product.source === "internal") {
+        // Internal products bypass the shopclone API
+        finalOrderData = {
+          status: "pending", // Will be updated to completed by the internal orders API
+          trans_id: `INT-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+          data: [],
+        };
+      } else {
+        // External products need to be purchased from the shopclone API first
+        const formData = new FormData();
+        formData.append("action", "buyProduct");
+        formData.append("id", product.id);
+        formData.append("amount", quantity.toString());
+
+        const externalRes = await fetch("/api/shop-products/buy", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+          body: formData,
+        });
+
+        if (!externalRes.ok) {
+          const errorData = await externalRes.json();
+          toast.error(errorData.message || "Purchase failed at external API.");
+          setLoading(false);
+          return;
+        }
+
+        const externalData = await externalRes.json();
+        console.log("External API response data:", externalData);
+        finalOrderData = {
+          status: externalData.status.toString(),
+          trans_id: externalData.trans_id.toString(),
+          data: externalData.data,
+        };
       }
-      const externalData = await externalRes.json();
-      console.log("External API response data:", externalData);
-      // ---- API CALL ----
+
+      // ---- API CALL TO INTERNAL ORDERS ----
       const res = await fetch("/api/orders", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          // Use 'Authorization' header for the API call
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
           userId,
           productId: product.id,
           quantity: quantity,
-          status: externalData.status.toString(),
-          trans_id: externalData.trans_id.toString(),
-          data: externalData.data,
+          status: finalOrderData.status,
+          trans_id: finalOrderData.trans_id,
+          data: finalOrderData.data,
           price: product.price.toString(),
-          stock: quantity.toString(),
+          stock: product.stock.toString(), // or quantity if you prefer
+          source: product.source || "external",
         }),
       });
 

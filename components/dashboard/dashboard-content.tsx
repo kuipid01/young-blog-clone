@@ -71,33 +71,91 @@ export function DashboardContent() {
     try {
       const res = await fetch("/api/products", { method: "GET" });
       const res2 = await fetch("/api/shop-products", { method: "GET" });
-      const data = await res.json();
-      const data2 = await res2.json();
-      console.log(data2);
-      // console.log("data from caller", data);
+      const internalData = await res.json();
+      const externalData = await res2.json();
 
       if (!res.ok) {
-        toast.error(data.message || "Failed to fetch products.");
-        setProducts([]); // Set to empty array on error
+        toast.error(internalData.message || "Failed to fetch products.");
+        setProducts([]);
         return;
       }
-      const categories = data2.categories.map((cat: { name: string }) => ({
+
+      // Processing external shop products
+      const externalCategories = (externalData.categories || []).map(
+        (cat: any) => ({
+          ...cat,
+          id: cat.id || `ext-cat-${cat.name}`,
+          products: (cat.products || []).map((p: any) => ({
+            ...p,
+            source: "external",
+            stock: Number(p.amount), // Ensuring consistent field used in UI
+            category: cat.name,
+          })),
+        })
+      );
+
+      // Transform internal products into category structure
+      const internalProducts = internalData.data || [];
+      const internalCategoryMap: Record<string, Category> = {};
+
+      internalProducts.forEach((p: any) => {
+        if (!internalCategoryMap[p.category]) {
+          internalCategoryMap[p.category] = {
+            id: `int-cat-${p.category.toLowerCase().replace(/\s+/g, "-")}`,
+            name: p.category,
+            icon: "/f-facebook.svg", // Default icon for internal
+            products: [],
+          };
+        }
+
+        internalCategoryMap[p.category].products.push({
+          id: p.id,
+          name: p.name,
+          price: p.price,
+          amount: Number(p.stock),
+          description: p.format,
+          category: p.category,
+          stock: Number(p.stock),
+          source: "internal",
+        } as any);
+      });
+
+      const internalCategories = Object.values(internalCategoryMap);
+
+      // Merge internal and external categories
+      const mergedCategories = [...externalCategories];
+      internalCategories.forEach((intCat) => {
+        const existingCat = mergedCategories.find(
+          (c) => c.name.toLowerCase() === intCat.name.toLowerCase()
+        );
+        if (existingCat) {
+          existingCat.products = [...existingCat.products, ...intCat.products];
+        } else {
+          mergedCategories.push(intCat);
+        }
+      });
+
+      // Update dropdown options
+      const dropdownCategories = mergedCategories.map((cat: any) => ({
         name: cat.name,
       }));
-      categories.unshift({ name: "All Categories" });
-      setDistinctCategories(categories);
-      setProductsAndCategories(data2.categories);
-      setAllCategories(data2.categories);
+      dropdownCategories.unshift({ name: "All Categories" });
+      setDistinctCategories(dropdownCategories);
+
+      setProductsAndCategories(mergedCategories);
+      setAllCategories(mergedCategories);
+
       localStorage.setItem(
         "shopProducts",
         JSON.stringify(
-          data2.categories.flatMap((cat: { products: any }) => cat.products)
+          mergedCategories.flatMap((cat: { products: any }) => cat.products)
         )
       );
-      setProducts(data.data);
+      setProducts(internalProducts);
     } catch (error) {
+      console.error(error);
       toast.error("An unexpected error occurred while loading products.");
-      setProducts([]); // Set to empty array on error
+      setProducts([]);
     } finally {
       setIsLoading(false);
     }

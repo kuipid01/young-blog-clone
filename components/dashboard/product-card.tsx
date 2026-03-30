@@ -16,6 +16,7 @@ export interface Product {
   category: string;
   inStock: boolean;
   amount: number;
+  source?: "internal" | "external";
 }
 
 interface ProductCardProps {

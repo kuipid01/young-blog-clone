@@ -12,6 +12,9 @@ type Product = {
   price: string;
   amount: number;
   description: string;
+  category: string;
+  stock: number;
+  source?: "internal" | "external";
 };
 
 export type Category = {
@@ -41,16 +44,21 @@ const ProductsAndCategories: React.FC<Props> = ({
    * Convert product prices using `rate`
    * -------------------------------------------------- */
   const convertedPrices = useMemo(() => {
-    if (!categories || !rate) return {};
+    if (!categories) return {};
 
     const prices: Record<string, string> = {};
 
     categories.forEach((category) => {
       category.products.forEach((product) => {
-        const base = Number(product.price) * rate;
-        //TODO MOVE MARKUP TO ENV
-        const markup = base * 0.65;
-        prices[product.id] = (base + markup).toFixed(2);
+        if (product.source === "internal") {
+          // Internal products are already in Naira
+          prices[product.id] = Number(product.price).toFixed(2);
+        } else if (rate) {
+          // External products need conversion and markup
+          const base = Number(product.price) * rate;
+          const markup = base * 0.65;
+          prices[product.id] = (base + markup).toFixed(2);
+        }
       });
     });
 
@@ -128,7 +136,6 @@ const ProductsAndCategories: React.FC<Props> = ({
             {category.products.map((product) => {
               const isOut = product.amount <= 0;
               const price = convertedPrices[product.id];
-
               return (
                 <article
                   key={product.id}
