@@ -7,7 +7,7 @@ import { logs, order, product, wallets, referrals, affiliateCommissions, affilia
 
 // Mock function for sending mail
 async function sendMailToAdmin(order: any) {
-  console.log(`[MAIL] Sent notification for order ${order.id}`);
+  console.log(`[MAIL] Sent notification for order ${order}`);
 }
 
 export async function POST(req: Request) {
@@ -164,7 +164,7 @@ export async function POST(req: Request) {
     console.log(`[STEP 5] Finalizing order`);
     let finalOrder: any;
 
-    if (source === "internal" && !trans_id && logToUseId) {
+    if (source === "internal" && logToUseId) {
       console.log(`[STEP 5] Internal product processing - Marking log as used and reducing stock`);
       // Mark log as used
       await db
@@ -182,7 +182,7 @@ export async function POST(req: Request) {
       console.log(`[STEP 5] Stock reduced - Previous: ${stock}, New: ${stockNumber}`);
 
       // Fetch final order with joined log
-      [finalOrder] = await db
+      const [joinedResult] = await db
         .select({
           order: order,
           log: {
@@ -194,6 +194,12 @@ export async function POST(req: Request) {
         .from(order)
         .leftJoin(logs, eq(order.logId, logs.id))
         .where(eq(order.id, orderId));
+
+      finalOrder = {
+        ...joinedResult.order,
+        log: joinedResult.log
+      };
+      
       console.log(`[STEP 5] Final order fetched with log details`);
     } else {
       console.log(`[STEP 5] External product processing - No log update needed`);

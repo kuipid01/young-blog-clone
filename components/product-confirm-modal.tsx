@@ -22,10 +22,7 @@ interface Order {
   id: string;
   logId: string;
   totalPrice: string;
-  log?: {
-    logDetails: string;
-    // ... potentially other log fields
-  };
+  log?: any;
   data: string[]; // In case multiple logs are returned
 }
 
@@ -185,7 +182,7 @@ export function PurchaseConfirmModal({
 
       // 1. Destructure the 'order' object (which now includes the log) and message
       const { order: finalOrder, message } = data;
-
+      console.log(finalOrder, "FINAL ORDER")
       // 2. Set the state with the final order data
       setOrder(finalOrder);
 
@@ -273,6 +270,7 @@ export function PurchaseConfirmModal({
         toast.error("Failed to copy log.");
       });
   };
+  console.log(order)
   const logDetails = order?.log?.logDetails || order?.data[0] || "";
   // Renders the content after a successful order
   const renderSuccessView = () => (
