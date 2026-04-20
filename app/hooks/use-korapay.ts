@@ -55,26 +55,45 @@ export const useKoraPay = () => {
 
   const verifyPayment = useCallback(async (reference: string) => {
     setIsVerifying(true);
-    try {
-      const res = await fetch(`/api/korapay/verify?reference=${reference}`);
-      const result = await res.json();
-      if (res.ok && result.status === true && result.data.status === "success") {
-        setIsSuccess(true);
-        // Optionally clear the query param from URL without refreshing
-        const url = new URL(window.location.href);
-        url.searchParams.delete("reference");
-        window.history.replaceState({}, "", url.pathname);
-        return true;
-      } else {
-        console.error("Payment verification failed", result);
+
+    const poll = async (ref: string, attempt = 0): Promise<boolean> => {
+      if (attempt >= 5) { 
+        toast.info("Transaction is still processing. You can safely leave this page; your wallet will be credited automatically once confirmed.");
         return false;
       }
-    } catch (error) {
-      console.error("Error verifying payment:", error);
-      return false;
-    } finally {
-      setIsVerifying(false);
-    }
+
+      try {
+        const res = await fetch(`/api/korapay/verify?reference=${ref}`);
+        const result = await res.json();
+
+        if (res.ok && result.status === true) {
+          const koraStatus = result.data.status;
+
+          if (koraStatus === "success") {
+            setIsSuccess(true);
+            // Optionally clear the query param from URL without refreshing
+            const url = new URL(window.location.href);
+            url.searchParams.delete("reference");
+            window.history.replaceState({}, "", url.pathname);
+            return true;
+          } else if (koraStatus === "processing") {
+            console.log("Processing this shii")
+            // Wait 3 seconds and retry
+            await new Promise((resolve) => setTimeout(resolve, 3000));
+            return poll(ref, attempt + 1);
+          }
+        }
+        console.error("Payment verification failed", result);
+        return false;
+      } catch (error) {
+        console.error("Error verifying payment:", error);
+        return false;
+      }
+    };
+
+    const finalResult = await poll(reference);
+    setIsVerifying(false);
+    return finalResult;
   }, []);
 
   return {
