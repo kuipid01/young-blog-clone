@@ -39,9 +39,9 @@ export function ManualDepositContent() {
     }
   )} NGN`;
 
-  const accountNumber = "9122041519";
-  const accountName = "DANJUMA JOHN";
-  const bankName = "Moniepoint";
+  const accountNumber = "2433107774";
+  const accountName = "Danjuma John ambuti";
+  const bankName = "Zenith Bank";
   const supportedFormats = "jpg, jpeg, png, pdf, doc, txt, xls, xlsx";
   const automaticPaymentLink = "https://t.me/Youngblogmarketplace/4";
 
@@ -212,7 +212,7 @@ export function ManualDepositContent() {
           <div className="py-2 space-y-2">
             {/* <IconWithText
               icon={<XCircle className="w-5 h-5 text-red-500" />}
-              text="DO NOT send to moniepoint bank"
+              text="DO NOT send to Zenith Bank"
               className="justify-center text-red-600"
             /> */}
             <IconWithText
