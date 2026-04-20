@@ -26,8 +26,14 @@ export async function POST(req: NextRequest) {
             default_channel,
             metadata,
             merchant_bears_cost,
+            redirect_url: bodyRedirectUrl,
         } = body;
-        const redirect_url = process.env.NODE_ENV === "development" ? "http://localhost:3000/dashboard" : "https://jemilmarketplace.com/dashboard";
+
+        const defaultRedirectUrl = process.env.NODE_ENV === "development" 
+            ? "http://localhost:3000/dashboard" 
+            : "https://jemilmarketplace.com/dashboard";
+            
+        const redirect_url = bodyRedirectUrl || defaultRedirectUrl;
         // Basic validation
         if (!amount || !currency || !reference || !customer?.email) {
             return NextResponse.json(

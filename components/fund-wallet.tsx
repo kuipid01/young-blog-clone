@@ -27,18 +27,17 @@ export function FundWalletContent() {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
   // const paymentMethods = ["Bank Transfer", "Card Payment", "USSD", "Crypto"]
-  const paymentMethods = ["Bank Transfer"];
+  const paymentMethods = ["Bank Transfer", "Automatic (Card, USSD, Bank)"];
 
   useEffect(() => {
+    if (!amount || !paymentMethod) return;
+
     if (paymentMethod === "Bank Transfer") {
-      if (!amount) {
-        toast.error("please add amount to fund");
-        setPaymentMethod("");
-      } else {
-        router.push(`/dashboard/manual-deposit?amount=${amount}`);
-      }
+      router.push(`/dashboard/manual-deposit?amount=${amount}`);
+    } else if (paymentMethod === "Automatic (Card, USSD, Bank)") {
+      router.push(`/dashboard/automatic-funding?amount=${amount}`);
     }
-  }, [paymentMethod, amount]);
+  }, [paymentMethod, amount, router]);
 
   return (
     <div className="space-y-6">
@@ -110,7 +109,19 @@ export function FundWalletContent() {
           </div>
 
           {/* Continue Button */}
-          <button className="w-full py-4 bg-gradient-to-r from-violet-500 to-purple-600 text-white rounded-lg font-semibold hover:from-violet-600 hover:to-purple-700 transition-colors">
+          <button 
+            onClick={() => {
+              if (!amount || Number(amount) < 100) {
+                toast.error("Please enter a valid amount (min ₦100)");
+                return;
+              }
+              if (!paymentMethod) {
+                toast.error("Please select a payment method");
+                return;
+              }
+            }}
+            className="w-full py-4 bg-gradient-to-r from-violet-500 to-purple-600 text-white rounded-lg font-semibold hover:from-violet-600 hover:to-purple-700 transition-colors"
+          >
             Continue
           </button>
         </div>
