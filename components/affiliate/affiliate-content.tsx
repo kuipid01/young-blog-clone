@@ -148,7 +148,7 @@ function RegistrationView({ user, profile, refetch }: any) {
     const router = useRouter();
 
     const handleCopyAccount = () => {
-        navigator.clipboard.writeText("2433107774");
+        navigator.clipboard.writeText("9122041519");
         setCopied(true);
         setTimeout(() => setCopied(false), 2000);
     };
@@ -259,7 +259,7 @@ function RegistrationView({ user, profile, refetch }: any) {
                                         <div className="flex justify-between items-start mb-3">
                                             <div>
                                                 <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Bank Name</p>
-                                                <p className="text-sm font-bold text-gray-900">Zenith Bank</p>
+                                                <p className="text-sm font-bold text-gray-900">Opay</p>
                                             </div>
                                             <div className="text-right">
                                                 <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Account Name</p>
@@ -269,7 +269,7 @@ function RegistrationView({ user, profile, refetch }: any) {
                                         <div className="pt-3 border-t border-violet-50 flex items-center justify-between">
                                             <div>
                                                 <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Account Number</p>
-                                                <p className="text-xl font-mono font-black text-violet-600 tracking-wider">2433107774</p>
+                                                <p className="text-xl font-mono font-black text-violet-600 tracking-wider">9122041519</p>
                                             </div>
                                             <button
                                                 onClick={handleCopyAccount}
