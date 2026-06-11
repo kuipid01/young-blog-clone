@@ -39,9 +39,9 @@ export function ManualDepositContent() {
     }
   )} NGN`;
 
-  const accountNumber = "9122041519";
-  const accountName = "Danjuma John ambuti";
-  const bankName = "Opay";
+  const accountNumber = "6869288024";
+  const accountName = "John Ambuti Danjuma";
+  const bankName = "Moniepoint MFB";
   const supportedFormats = "jpg, jpeg, png, pdf, doc, txt, xls, xlsx";
   const automaticPaymentLink = "https://t.me/Youngblogmarketplace/4";
 
