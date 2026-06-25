@@ -5,6 +5,7 @@ const API_KEYS = {
     process.env.EXCHANGERATE_API_ONE,
     process.env.EXCHANGERATE_API_TWO,
     process.env.EXCHANGERATE_API_THREE,
+    process.env.EXCHANGERATE_API_FOUR,
   ],
   fixer: [process.env.FIXER_API_ONE],
 };
