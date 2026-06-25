@@ -12,6 +12,7 @@ import { CustomModal, CustomModalHeader, CustomModalBody, CustomModalFooter } fr
 import { WalletCardSkeleton } from "./wallet-card-loader";
 import { useUserOrders } from "../app/hooks/user-orders";
 import { usePayments } from "../app/hooks/user-payments";
+import { useKoraPay } from "../app/hooks/use-korapay";
 import clsx from "clsx";
 import useWalletStore from "../app/stores/wallet-stores";
 import { useGetLoggedInUser } from "../app/hooks/use-get-logged-in-user";
@@ -31,8 +32,7 @@ export function DashboardHome() {
   const [userWallet, setuserWallet] = useState<any>(null);
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
-  const [amount, setAmount] = useState<number>(0); // Ensure amount is number type
-  const [creatingAccount, setCreatingAccount] = useState(false);
+  const [amount, setAmount] = useState<number>(0);
   const [fetchingWallet, setfetchingWallet] = useState(false);
   const { orders } = useUserOrders();
 
@@ -40,7 +40,14 @@ export function DashboardHome() {
   const [showAmountInput, setShowAmountInput] = useState(false);
   const searchParams = useSearchParams();
   const [showSuccessModal, setShowSuccessModal] = useState(false);
-  const [verifying, setVerifying] = useState(false);
+
+  const {
+    initiateKoraFunding,
+    verifyPayment,
+    isInitiating: creatingAccount,
+    isVerifying: verifying,
+    isSuccess
+  } = useKoraPay();
 
   const totalDeposit = payments
     ?.filter((payment) => payment.status === "funded")
@@ -111,62 +118,6 @@ export function DashboardHome() {
 
   // --- Interfaces and initiateTemporaryWalletFunding function (Moved to component body for scope) ---
 
-  interface PaystackInitResponse {
-    status: boolean;
-    message: string;
-    data: {
-      authorization_url?: string;
-      access_code?: string;
-      reference: string;
-      account_number?: string;
-      bank_name?: string;
-      bank_code?: string;
-    };
-  }
-
-  interface FundingRequestData {
-    userId: string;
-    email: string;
-    amount: number; // Amount in kobo/cents
-  }
-
-  const initiateKoraFunding = useCallback(
-    async (fundingData: any): Promise<any | null> => {
-      console.log("Starting KoraPay funding process...");
-
-      try {
-        setCreatingAccount(true);
-        const response = await fetch("/api/korapay/initialize", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(fundingData),
-        });
-
-        const result = await response.json();
-
-        if (!response.ok) {
-          throw new Error(result.message || "Failed to initialize KoraPay charge");
-        }
-
-        if (result.status && result.data.checkout_url) {
-          toast.success("Redirecting to payment gateway...");
-          window.location.href = result.data.checkout_url;
-        }
-
-        return result.data;
-      } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : "Unknown funding error.";
-        toast.error(errorMessage);
-        console.error("KoraPay Funding Initiation Failed:", error);
-        return null;
-      } finally {
-        setCreatingAccount(false);
-      }
-    },
-    []
-  );
 
   // --- NEW HANDLER FUNCTION ---
   const handleFundWalletClick = async () => {
@@ -220,30 +171,14 @@ export function DashboardHome() {
 
   useEffect(() => {
     const reference = searchParams.get("reference");
-    if (reference && !verifying) {
-      const verifyPayment = async () => {
-        setVerifying(true);
-        try {
-          const res = await fetch(`/api/korapay/verify?reference=${reference}`);
-          const result = await res.json();
-          if (res.ok && result.status === true && result.data.status === "success") {
-            setShowSuccessModal(true);
-            // Optionally clear the query param from URL without refreshing
-            const url = new URL(window.location.href);
-            url.searchParams.delete("reference");
-            window.history.replaceState({}, "", url.pathname);
-          } else {
-            console.error("Payment verification failed or status not success", result);
-          }
-        } catch (error) {
-          console.error("Error verifying payment:", error);
-        } finally {
-          setVerifying(false);
+    if (reference && !verifying && !isSuccess) {
+      verifyPayment(reference).then((success) => {
+        if (success) {
+          setShowSuccessModal(true);
         }
-      };
-      verifyPayment();
+      });
     }
-  }, [searchParams, verifying]);
+  }, [searchParams, verifying, isSuccess, verifyPayment]);
 
   return (
     <div className="space-y-6">
